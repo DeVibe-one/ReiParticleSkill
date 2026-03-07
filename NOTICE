@@ -10,12 +10,11 @@ No "or later version" clause applies.
 
 Note: This project is licensed solely under LGPL-3.0-only. The LGPL-3.0 text
 incorporates GPLv3 conditions by reference, so the GPL-3.0 full text is
-included in LICENSES/ for ease of review — not as a separate grant of rights.
+included in LICENSES/ for ease of review - not as a separate grant of rights.
 See LICENSES/LGPL-3.0.txt and LICENSES/GPL-3.0.txt.
 
-Modules:
-1. ReiParticleSkill   - Forge 1.20.1 particle effects mod
-2. ReiParticlesAPI    - Particle system API
+Project layout:
+1. forge-port - ReiParticleSkill Forge module with bundled ReiParticlesAPI runtime
 
 License scope:
 - All files in this project, including source code, build scripts, and
@@ -25,7 +24,7 @@ Source code availability:
 - If you redistribute the binary (jar), you must also make the corresponding
   source code available (e.g., by providing the repository URL + version tag,
   or otherwise as described in the LGPL-3.0).
-- Source: https://github.com/reiasu2/ReiParticleSkill
+- Source: https://github.com/DeVibe-one/ReiParticleSkill.git
   For release builds, use the matching version tag (e.g., /tree/v1.0).
 
 Trademark notice:

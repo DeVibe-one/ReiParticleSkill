@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.reiasu.reiparticleskill.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "reiparticleskill.refmap.json",
+  "client": [
+    "EndCrystalRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

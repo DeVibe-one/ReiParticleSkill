@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.reiasu.reiparticlesapi.network.particle.emitters.ParticleEmittersManagerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-03-07T11:11:42" hostname="服务器" time="0.016">
+  <properties/>
+  <testcase name="shouldBindWorldAndPositionWhenSpawningInWorld()" classname="com.reiasu.reiparticlesapi.network.particle.emitters.ParticleEmittersManagerTest" time="0.008"/>
+  <testcase name="shouldTickAndPruneEmittersAtMaxTick()" classname="com.reiasu.reiparticlesapi.network.particle.emitters.ParticleEmittersManagerTest" time="0.006"/>
+  <testcase name="shouldIgnoreNonEmitterObjects()" classname="com.reiasu.reiparticlesapi.network.particle.emitters.ParticleEmittersManagerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.reiasu.reiparticlesapi.display.DisplayEntityManagerTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-03-07T11:11:32" hostname="服务器" time="8.451">
+  <properties/>
+  <testcase name="shouldUsePolymorphicPositionAccessorsForBaseSerialization()" classname="com.reiasu.reiparticlesapi.display.DisplayEntityManagerTest" time="0.251"/>
+  <testcase name="shouldBindWorldAndPositionWhenSpawningInWorld()" classname="com.reiasu.reiparticlesapi.display.DisplayEntityManagerTest" time="8.135"/>
+  <testcase name="shouldTickAndRemoveCanceledDisplays()" classname="com.reiasu.reiparticlesapi.display.DisplayEntityManagerTest" time="0.001"/>
+  <testcase name="shouldEncodeAndDecodeDebugDisplayEntityState()" classname="com.reiasu.reiparticlesapi.display.DisplayEntityManagerTest" time="0.057"/>
+  <testcase name="shouldUpdateDebugDisplayPositionAfterCreation()" classname="com.reiasu.reiparticlesapi.display.DisplayEntityManagerTest" time="0.0"/>
+  <testcase name="shouldIgnoreUnknownDisplayObjects()" classname="com.reiasu.reiparticlesapi.display.DisplayEntityManagerTest" time="0.0"/>
+  <testcase name="shouldRegisterBuiltinDebugDisplayDecoder()" classname="com.reiasu.reiparticlesapi.display.DisplayEntityManagerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

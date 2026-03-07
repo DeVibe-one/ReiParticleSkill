@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.reiasu.reiparticlesapi.particles.ControllableParticleRenderHelperTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-03-07T11:11:42" hostname="服务器" time="0.047">
+  <properties/>
+  <testcase name="shouldUseFixedRotationForWorldAlignedParticles()" classname="com.reiasu.reiparticlesapi.particles.ControllableParticleRenderHelperTest" time="0.04"/>
+  <testcase name="shouldAppendRollToCameraFacingRotation()" classname="com.reiasu.reiparticlesapi.particles.ControllableParticleRenderHelperTest" time="0.001"/>
+  <testcase name="shouldResolveRenderPositionInCameraSpace()" classname="com.reiasu.reiparticlesapi.particles.ControllableParticleRenderHelperTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

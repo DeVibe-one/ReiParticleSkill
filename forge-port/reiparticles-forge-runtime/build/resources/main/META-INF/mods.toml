@@ -1,0 +1,64 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="LGPL-3.0-only"
+
+[[mods]]
+modId="reiparticleskill"
+version="1.0-SNAPSHOT-forge-port"
+displayName="ReiParticleSkill"
+displayTest="IGNORE_ALL_VERSION"
+authors="Reiasu"
+description='''
+ReiParticleSkill gameplay module for Forge 1.20.x.
+Includes the bundled ReiParticlesAPI runtime in a single jar.
+End dragon respawn effects, display and railgun commands run through the integrated runtime.
+'''
+
+[[dependencies.reiparticleskill]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.reiparticleskill]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.reiparticleskill]]
+modId="reiparticlesapi"
+mandatory=true
+versionRange="[0,)"
+ordering="AFTER"
+side="BOTH"
+
+[[mods]]
+modId="reiparticlesapi"
+version="1.0-SNAPSHOT-forge-port"
+displayName="ReiParticlesAPI"
+displayTest="IGNORE_ALL_VERSION"
+authors="Reiasu"
+description='''
+Bundled runtime services for ReiParticleSkill on Forge 1.20.x.
+Includes animation, emitter, display and test lifecycle services inside the main jar.
+'''
+
+[[dependencies.reiparticlesapi]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.reiparticlesapi]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"
+
+[[mixins]]
+config="reiparticleskill.mixins.json"

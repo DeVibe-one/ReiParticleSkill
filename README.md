@@ -2,12 +2,7 @@
 
 [![License: LGPL-3.0-only](https://img.shields.io/badge/License-LGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 
-A Minecraft Forge 1.20.1 particle effects mod featuring custom Ender Dragon respawn animations and visual effects.
-
-## Project Layout
-
-The workspace now builds a single Gradle module in `forge-port/`.
-That jar bundles the former `ReiParticlesAPI` runtime, so only one output jar is produced.
+ReiParticleSkill is a Forge 1.20.1 mod for Ender Dragon respawn effects.
 
 ## Requirements
 
@@ -15,19 +10,18 @@ That jar bundles the former `ReiParticlesAPI` runtime, so only one output jar is
 - Forge 47.2.0
 - Java 17
 
-## Building
+## Build
 
 ```bash
 cd forge-port
 .\gradlew build
 ```
 
-Or run `build.cmd` from the repository root.
+Run Gradle from `forge-port`.
+If you just want a quick build from the repository root, run `build.cmd`. It builds the mod without tests and copies the jar to your Desktop.
 
-Output jar:
-`forge-port/build/libs/reiparticleskill-1.0-SNAPSHOT-forge-port.jar`
-
-Place that single jar in the `mods/` folder.
+Output jar: `forge-port/build/libs/reiparticleskill-1.0-SNAPSHOT-forge-port.jar`
+Tests: `cd forge-port` then `.\gradlew test`
 
 ## Development
 
@@ -36,19 +30,11 @@ cd forge-port
 .\gradlew runClient
 ```
 
+## Distribution
+
+Put the jar in your `mods/` folder.
+If you share a build, keep `LICENSE` and `NOTICE` with it and provide the matching source code.
+
 ## License
 
-This project is licensed under **LGPL-3.0-only**. See `LICENSE`, `ATTRIBUTION.md`, and the `LICENSES/` directory for details.
-
-### For Modpack Authors / Players
-
-- Keep the original `LICENSE` and `NOTICE` files bundled with the jar intact.
-- If you redistribute the jar, also provide a link to the corresponding source code.
-- You do not need to open-source your modpack or other mods just because you include this one.
-
-### For Mod Developers
-
-- `ReiParticlesAPI` is now bundled into the same source module and jar as `ReiParticleSkill`.
-- If you modify and redistribute this project's source code, publish those changes under LGPL-3.0 and mark them clearly.
-
-*The above is a simplified summary, not legal advice. See the full license texts for authoritative terms.*
+This project is licensed under **LGPL-3.0-only**. See `LICENSE`, `NOTICE`, `ATTRIBUTION.md`, and `LICENSES/`.

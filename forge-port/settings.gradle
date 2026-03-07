@@ -11,3 +11,8 @@ plugins {
 }
 
 rootProject.name = 'reiparticleskill'
+
+include 'reiparticles-core'
+include 'reiparticles-skill'
+include 'reiparticles-testkit'
+include 'reiparticles-forge-runtime'

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.reiasu.reiparticleskill.barrages.SkillBarrageManagerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-03-07T11:07:36" hostname="服务器" time="2.266">
+  <properties/>
+  <testcase name="clearCancelsAndRemovesAll()" classname="com.reiasu.reiparticleskill.barrages.SkillBarrageManagerTest" time="2.199"/>
+  <testcase name="invalidBarragesArePrunedAfterTick()" classname="com.reiasu.reiparticleskill.barrages.SkillBarrageManagerTest" time="0.002"/>
+  <testcase name="clearShouldIgnoreControllerCleanupFailures()" classname="com.reiasu.reiparticleskill.barrages.SkillBarrageManagerTest" time="0.063"/>
+  <system-out><![CDATA[2026-03-07 20:07:37,837 Test worker WARN Advanced terminal features are not available in this environment
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

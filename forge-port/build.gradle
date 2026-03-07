@@ -1,124 +1,172 @@
 plugins {
+    id 'base'
     id 'eclipse'
     id 'idea'
-    id 'maven-publish'
-    id 'net.minecraftforge.gradle' version '[6.0.36,6.2)'
 }
 
 version = mod_version
 group = mod_group_id
 
-base {
-    archivesName = mod_id
-}
+allprojects {
+    version = rootProject.version
+    group = rootProject.group
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net' }
+        mavenCentral()
     }
 }
 
-minecraft {
-    mappings channel: 'official', version: minecraft_version
+ext.configureJavaModule = { Project target, boolean allowThrowable, List<String> throwableCatchAllowlist ->
+    target.java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
+    }
 
-    copyIdeResources = true
+    target.dependencies {
+        testImplementation platform('org.junit:junit-bom:5.11.4')
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+    }
 
-    runs {
-        configureEach {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            mods {
-                // Both mod ids now live in the same merged project output.
-                "${mod_id}" {
-                    source sourceSets.main
+    target.tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+
+    target.tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+    }
+
+    def isThrowableCatchAllowed = { File file ->
+        def normalized = file.path.replace('\\', '/')
+        throwableCatchAllowlist.any { normalized.endsWith(it) }
+    }
+
+    def collectStyleViolations = { FileTree tree ->
+        def violations = []
+        tree.files.sort().each { file ->
+            def lines = file.readLines('UTF-8')
+            lines.eachWithIndex { line, idx ->
+                if (line.contains('\t')) {
+                    violations << "${file}:${idx + 1}: tab character"
                 }
-                reiparticlesapi {
-                    source sourceSets.main
+                if (line ==~ /.*\s+$/ && !line.trim().isEmpty()) {
+                    violations << "${file}:${idx + 1}: trailing whitespace"
+                }
+                if (line ==~ /import\s+.*\.\*;/) {
+                    violations << "${file}:${idx + 1}: wildcard import"
+                }
+                if (line.contains('System.out.') || line.contains('printStackTrace(')) {
+                    violations << "${file}:${idx + 1}: debug console output"
+                }
+                if (!allowThrowable && line.contains('catch (Throwable') && !isThrowableCatchAllowed(file)) {
+                    violations << "${file}:${idx + 1}: catch(Throwable)"
                 }
             }
+            if (file.length() > 0 && !file.getText('UTF-8').endsWith('\n')) {
+                violations << "${file}: missing trailing newline"
+            }
         }
-
-        client {}
-
-        server {
-            args '--nogui'
-        }
-
-        data {
-            args '--mod', mod_id, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
-        }
+        violations
     }
-}
 
-sourceSets.main.resources { srcDir 'src/generated/resources' }
-
-repositories {
-    maven { url = 'https://maven.minecraftforge.net' }
-    mavenCentral()
-}
-
-dependencies {
-    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    implementation 'io.github.classgraph:classgraph:4.8.174'
-    testImplementation platform('org.junit:junit-bom:5.11.4')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-}
-
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
-}
-
-processResources {
-    var replaceProperties = [
-            mod_id                 : mod_id,
-            mod_name               : mod_name,
-            mod_license            : mod_license,
-            mod_version            : mod_version,
-            loader_version_range   : loader_version_range,
-            minecraft_version_range: minecraft_version_range
-    ]
-    inputs.properties replaceProperties
-    filesMatching(['META-INF/mods.toml']) {
-        expand replaceProperties
-    }
-}
-
-tasks.withType(Test).configureEach {
-    useJUnitPlatform()
-}
-
-jar {
-    manifest {
-        attributes([
-                'Specification-Title'     : mod_name,
-                'Specification-Vendor'    : 'reiasu',
-                'Specification-Version'   : '1',
-                'Implementation-Title'    : project.name,
-                'Implementation-Version'  : project.version,
-                'Implementation-Vendor'   : 'reiasu'
-        ])
-    }
-    into('META-INF') {
-        from rootProject.file('../LICENSE')
-        from rootProject.file('../NOTICE')
-        from rootProject.file('../THIRD_PARTY_NOTICES.md')
-    }
-    into('META-INF/LICENSES') {
-        from rootProject.file('../LICENSES/LGPL-3.0.txt')
-        from rootProject.file('../LICENSES/GPL-3.0.txt')
-    }
-}
-
-publishing {
-    publications {
-        register('mavenJava', MavenPublication) {
-            artifact jar
+    target.tasks.register('spotlessCheck') {
+        group = 'verification'
+        description = "Checks basic formatting invariants for ${target.path} without mutating files."
+        doLast {
+            def trees = [
+                    target.fileTree('src/main/java') { include '**/*.java' },
+                    target.fileTree('src/test/java') { include '**/*.java' },
+                    target.files('build.gradle').asFileTree
+            ]
+            if (target.file('settings.gradle').exists()) {
+                trees.add(target.files('settings.gradle').asFileTree)
+            }
+            if (target.file('gradle.properties').exists()) {
+                trees.add(target.files('gradle.properties').asFileTree)
+            }
+            def violations = []
+            trees.each { tree ->
+                violations.addAll(collectStyleViolations(tree).findAll {
+                    !it.contains('wildcard import') && !it.contains('debug console output')
+                })
+            }
+            if (!violations.isEmpty()) {
+                throw new GradleException("${target.path}:spotlessCheck failed:\n" + violations.join('\n'))
+            }
         }
     }
-    repositories {
-        maven {
-            url "file://${project.projectDir}/repo"
+
+    target.tasks.register('checkstyleMain') {
+        group = 'verification'
+        description = "Checks main-source style rules for ${target.path}."
+        doLast {
+            def violations = collectStyleViolations(target.fileTree('src/main/java') { include '**/*.java' }).findAll {
+                !it.contains('tab character')
+                        && !it.contains('trailing whitespace')
+                        && !it.contains('missing trailing newline')
+                        && !it.contains('wildcard import')
+            }
+            if (!violations.isEmpty()) {
+                throw new GradleException("${target.path}:checkstyleMain failed:\n" + violations.join('\n'))
+            }
         }
     }
+
+    target.tasks.register('checkstyleTest') {
+        group = 'verification'
+        description = "Checks test-source style rules for ${target.path}."
+        doLast {
+            def violations = collectStyleViolations(target.fileTree('src/test/java') { include '**/*.java' }).findAll {
+                !it.contains('tab character')
+                        && !it.contains('trailing whitespace')
+                        && !it.contains('missing trailing newline')
+                        && !it.contains('wildcard import')
+            }
+            if (!violations.isEmpty()) {
+                throw new GradleException("${target.path}:checkstyleTest failed:\n" + violations.join('\n'))
+            }
+        }
+    }
+
+    target.tasks.named('check') {
+        dependsOn target.tasks.named('spotlessCheck'),
+                target.tasks.named('checkstyleMain'),
+                target.tasks.named('checkstyleTest')
+    }
+}
+
+tasks.register('test') {
+    group = 'verification'
+    description = 'Runs the test task for all subprojects.'
+    dependsOn subprojects.collect { "${it.path}:test" }
+}
+
+tasks.register('spotlessCheck') {
+    group = 'verification'
+    description = 'Runs spotlessCheck for all subprojects.'
+    dependsOn subprojects.collect { "${it.path}:spotlessCheck" }
+}
+
+tasks.register('checkstyleMain') {
+    group = 'verification'
+    description = 'Runs checkstyleMain for all subprojects.'
+    dependsOn subprojects.collect { "${it.path}:checkstyleMain" }
+}
+
+tasks.register('checkstyleTest') {
+    group = 'verification'
+    description = 'Runs checkstyleTest for all subprojects.'
+    dependsOn subprojects.collect { "${it.path}:checkstyleTest" }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('test'),
+            tasks.named('spotlessCheck'),
+            tasks.named('checkstyleMain'),
+            tasks.named('checkstyleTest')
+}
+
+tasks.named('build') {
+    dependsOn subprojects.collect { "${it.path}:build" }
 }

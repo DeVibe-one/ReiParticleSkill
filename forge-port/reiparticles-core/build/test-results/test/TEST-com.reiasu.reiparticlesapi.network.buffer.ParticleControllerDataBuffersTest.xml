@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.reiasu.reiparticlesapi.network.buffer.ParticleControllerDataBuffersTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-03-07T11:11:42" hostname="服务器" time="0.066">
+  <properties/>
+  <testcase name="shouldRoundTripBufferWithEnvelopeEncoding()" classname="com.reiasu.reiparticlesapi.network.buffer.ParticleControllerDataBuffersTest" time="0.057"/>
+  <testcase name="shouldRoundTripPrimitiveArrays()" classname="com.reiasu.reiparticlesapi.network.buffer.ParticleControllerDataBuffersTest" time="0.004"/>
+  <testcase name="shouldDecodeByBufferId()" classname="com.reiasu.reiparticlesapi.network.buffer.ParticleControllerDataBuffersTest" time="0.002"/>
+  <testcase name="shouldResolveWrapperClassToPrimitiveRegistration()" classname="com.reiasu.reiparticlesapi.network.buffer.ParticleControllerDataBuffersTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

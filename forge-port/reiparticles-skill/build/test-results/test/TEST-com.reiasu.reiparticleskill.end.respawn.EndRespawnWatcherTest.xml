@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.reiasu.reiparticleskill.end.respawn.EndRespawnWatcherTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-03-07T11:07:48" hostname="服务器" time="0.032">
+  <properties/>
+  <testcase name="crystalOverrideShouldKeepSummonPillarsWhenCrystalsAlive()" classname="com.reiasu.reiparticleskill.end.respawn.EndRespawnWatcherTest" time="0.004"/>
+  <testcase name="negativeCrystalCountShouldFallBackToTickOnly()" classname="com.reiasu.reiparticleskill.end.respawn.EndRespawnWatcherTest" time="0.005"/>
+  <testcase name="thresholdConstantsShouldBeOrdered()" classname="com.reiasu.reiparticleskill.end.respawn.EndRespawnWatcherTest" time="0.001"/>
+  <testcase name="shouldMapSyntheticTicksToExpectedPhases()" classname="com.reiasu.reiparticleskill.end.respawn.EndRespawnWatcherTest" time="0.001"/>
+  <testcase name="crystalOverrideShouldNotApplyBeyondTolerance()" classname="com.reiasu.reiparticleskill.end.respawn.EndRespawnWatcherTest" time="0.0"/>
+  <testcase name="zeroCrystalsShouldJumpToBeforeEndOrEnd()" classname="com.reiasu.reiparticleskill.end.respawn.EndRespawnWatcherTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

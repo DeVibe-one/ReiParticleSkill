@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.reiasu.reiparticleskill.animats.AnimatsActionTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-03-07T11:07:34" hostname="服务器" time="1.658">
+  <properties/>
+  <testcase name="emitterCrafterActionSpawnsAtInterval()" classname="com.reiasu.reiparticleskill.animats.AnimatsActionTest" time="0.088"/>
+  <testcase name="displayEntityActionSpawnsOnlyOnce()" classname="com.reiasu.reiparticleskill.animats.AnimatsActionTest" time="1.558"/>
+  <testcase name="tickingActionStopsAtMaxTick()" classname="com.reiasu.reiparticleskill.animats.AnimatsActionTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.reiasu.reiparticlesapi.ReiParticlesAPISchedulerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-03-07T11:11:30" hostname="服务器" time="0.017">
+  <properties/>
+  <testcase name="serverTasksShouldNotAdvanceOnClientTicks()" classname="com.reiasu.reiparticlesapi.ReiParticlesAPISchedulerTest" time="0.008"/>
+  <testcase name="shouldExecuteWhenTickIsZero()" classname="com.reiasu.reiparticlesapi.ReiParticlesAPISchedulerTest" time="0.007"/>
+  <testcase name="shouldExecuteScheduledTask()" classname="com.reiasu.reiparticlesapi.ReiParticlesAPISchedulerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

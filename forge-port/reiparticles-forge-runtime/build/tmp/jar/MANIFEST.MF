@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+Specification-Title: ReiParticleSkill
+Specification-Vendor: reiasu
+Specification-Version: 1
+Implementation-Title: reiparticles-forge-runtime
+Implementation-Version: 1.0-SNAPSHOT-forge-port
+Implementation-Vendor: reiasu
+

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.reiasu.reiparticleskill.display.SkillDisplayCodecTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-03-07T11:07:38" hostname="服务器" time="9.664">
+  <properties/>
+  <testcase name="shouldRoundTripBarrageItemDisplayState()" classname="com.reiasu.reiparticleskill.display.SkillDisplayCodecTest" time="9.601"/>
+  <testcase name="shouldRoundTripLightFlashDisplayState()" classname="com.reiasu.reiparticleskill.display.SkillDisplayCodecTest" time="0.023"/>
+  <testcase name="shouldRoundTripSwordLightDisplayState()" classname="com.reiasu.reiparticleskill.display.SkillDisplayCodecTest" time="0.021"/>
+  <testcase name="shouldRegisterSkillDisplayTypes()" classname="com.reiasu.reiparticleskill.display.SkillDisplayCodecTest" time="0.012"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

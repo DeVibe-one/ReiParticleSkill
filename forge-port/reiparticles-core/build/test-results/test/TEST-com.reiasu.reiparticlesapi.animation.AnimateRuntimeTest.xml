@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.reiasu.reiparticlesapi.animation.AnimateRuntimeTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-03-07T11:11:32" hostname="服务器" time="0.014">
+  <properties/>
+  <testcase name="shouldDriveAnimateToCompletionByServerTicks()" classname="com.reiasu.reiparticlesapi.animation.AnimateRuntimeTest" time="0.008"/>
+  <testcase name="shouldCancelWhenPredicateIsSatisfied()" classname="com.reiasu.reiparticlesapi.animation.AnimateRuntimeTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

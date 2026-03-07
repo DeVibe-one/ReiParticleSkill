@@ -1,22 +1,11 @@
 # Attribution
 
-## Author
+ReiParticleSkill and ReiParticlesAPI were written by Reiasu.
 
-- **Reiasu** — original author and maintainer
+Some particle patterns in this project use standard math curves, including rhodonea curves such as `r = cos(k * theta)` and Lissajous figures such as `x = A sin(a * t + delta)` and `y = B sin(b * t)`.
 
-## Algorithms & Inspirations
+The Ender Dragon respawn timing and state changes follow vanilla Minecraft's `DragonRespawnAnimation`.
 
-- **Rhodonea (rose) curves** — parametric polar curves `r = cos(kθ)` used in
-  center particle patterns (`ClientCenterEmitter`).
-- **Lissajous figures** — `x = A sin(at + δ), y = B sin(bt)` used for
-  oscillating particle trails.
-- **Ender Dragon respawn sequence** — timing constants derived from vanilla
-  Minecraft's `DragonRespawnAnimation` state machine (Mojang Studios).
+Third-party dependency notices are listed in `THIRD_PARTY_NOTICES.md`.
 
-## Third-Party Libraries
-
-See `THIRD_PARTY_NOTICES.md` for full license texts of bundled/runtime dependencies.
-
-## License
-
-This project is licensed under LGPL-3.0-only. See `LICENSE` and `NOTICE` for details.
+This project is licensed under `LGPL-3.0-only`. See `LICENSE` and `NOTICE` for the authoritative terms.

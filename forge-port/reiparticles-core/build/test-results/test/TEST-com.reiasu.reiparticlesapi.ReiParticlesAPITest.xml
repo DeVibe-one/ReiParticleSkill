@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.reiasu.reiparticlesapi.ReiParticlesAPITest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-03-07T11:11:30" hostname="服务器" time="2.077">
+  <properties/>
+  <testcase name="shouldAllowRepeatedLifecycleCalls()" classname="com.reiasu.reiparticlesapi.ReiParticlesAPITest" time="2.077"/>
+  <system-out><![CDATA[2026-03-07 20:11:32,024 Test worker WARN Advanced terminal features are not available in this environment
+[20:11:32] [Test worker/INFO] [co.re.re.ReiParticlesAPI/]: ReiParticlesAPI init completed
+[20:11:32] [Test worker/INFO] [co.re.re.ReiParticlesAPI/]: ReiParticlesAPI scanner packages loaded
+[20:11:32] [Test worker/INFO] [co.re.re.ev.ReiEventBus/]: initListeners(): no packages registered for scanning. Use registerAnnotatedClass() or registerListenerInstance() for explicit registration.
+[20:11:32] [Test worker/INFO] [co.re.re.ReiParticlesAPI/]: ReiParticlesAPI test hooks registered
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
