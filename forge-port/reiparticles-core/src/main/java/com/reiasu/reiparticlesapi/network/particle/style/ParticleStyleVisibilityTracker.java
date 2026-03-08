@@ -39,6 +39,16 @@ final class ParticleStyleVisibilityTracker {
         return visibilityTick++;
     }
 
+    void syncSpawnVisible(ParticleGroupStyle style, ServerLevel level) {
+        beginSharedBudget(level);
+        for (ServerPlayer player : level.players()) {
+            Set<UUID> visibleSet = visible.computeIfAbsent(player.getUUID(), ignored -> ConcurrentHashMap.newKeySet());
+            if (canViewStyle(style, player) && !visibleSet.contains(style.getUuid())) {
+                addView(player, style, visibleSet);
+            }
+        }
+    }
+
     void updateClientVisible(ParticleGroupStyle style,
                              ServerLevel level,
                              long tick,
@@ -76,6 +86,7 @@ final class ParticleStyleVisibilityTracker {
     }
 
     void clear() {
+        visible.clear();
         visibilityTick = 0L;
         statSynced = 0;
         statSkippedLod = 0;

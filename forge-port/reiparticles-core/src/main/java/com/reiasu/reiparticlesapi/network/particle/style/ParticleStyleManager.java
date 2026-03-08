@@ -81,11 +81,7 @@ public final class ParticleStyleManager {
         SERVER_VIEW_STYLES.put(style.getUuid(), style);
         if (world instanceof ServerLevel serverLevel) {
             style.setLastUpdatedGameTime(serverLevel.getGameTime());
-            for (ServerPlayer player : serverLevel.players()) {
-                if (ParticleStyleVisibilityTracker.canViewStyle(style, player)) {
-                    addStylePlayerView(player, style);
-                }
-            }
+            VISIBILITY_TRACKER.syncSpawnVisible(style, serverLevel);
             style.clearDirty();
         }
     }
@@ -145,22 +141,6 @@ public final class ParticleStyleManager {
         }
 
         pruneDisconnectedPlayers();
-    }
-
-    private static void removeStylePlayerView(ServerPlayer player, ParticleGroupStyle style) {
-        Set<UUID> visibleSet = VISIBLE.computeIfAbsent(player.getUUID(), ignored -> ConcurrentHashMap.newKeySet());
-        visibleSet.remove(style.getUuid());
-        PacketParticleStyleS2C packet = new PacketParticleStyleS2C(style.getUuid(), ControlType.REMOVE, Map.of());
-        ReiParticlesNetwork.sendTo(player, packet);
-    }
-
-    private static void addStylePlayerView(ServerPlayer player, ParticleGroupStyle style) {
-        Set<UUID> visibleSet = VISIBLE.computeIfAbsent(player.getUUID(), ignored -> ConcurrentHashMap.newKeySet());
-        if (!visibleSet.add(style.getUuid())) {
-            return;
-        }
-        PacketParticleStyleS2C packet = buildCreatePacket(style, style.getPos());
-        ReiParticlesNetwork.sendTo(player, packet);
     }
 
     private static PacketParticleStyleS2C buildAutoTogglePacket(ParticleGroupStyle style) {
@@ -240,5 +220,19 @@ public final class ParticleStyleManager {
             style.remove();
         }
         CLIENT_VIEW_STYLES.clear();
+    }
+
+    public static void clearServer() {
+        for (ParticleGroupStyle style : SERVER_VIEW_STYLES.values()) {
+            style.remove();
+        }
+        SERVER_VIEW_STYLES.clear();
+        VISIBLE.clear();
+        VISIBILITY_TRACKER.clear();
+    }
+
+    public static void clear() {
+        clearServer();
+        clearAllVisible();
     }
 }

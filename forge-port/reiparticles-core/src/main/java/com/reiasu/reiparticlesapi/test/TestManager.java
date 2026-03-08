@@ -141,9 +141,16 @@ public final class TestManager {
         }
     }
 
-    public void clear() {
+    public void clearServer() {
         validGroupsServer.clear();
+    }
+
+    public void clearClient() {
         validGroupsClient.clear();
     }
-}
 
+    public void clear() {
+        clearServer();
+        clearClient();
+    }
+}

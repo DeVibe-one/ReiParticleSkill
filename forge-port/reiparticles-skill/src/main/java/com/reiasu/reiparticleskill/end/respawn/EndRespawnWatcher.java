@@ -61,6 +61,10 @@ public final class EndRespawnWatcher {
         }
     }
 
+    public static void reset() {
+        SYNTHETIC_TRACKERS.clear();
+    }
+
     public static Optional<RespawnProbe> probeServer(MinecraftServer server) {
         for (ServerLevel level : server.getAllLevels()) {
             if (!Level.END.equals(level.dimension())) {
@@ -107,7 +111,7 @@ public final class EndRespawnWatcher {
         return Math.max(fromFight, fromPortalArea);
     }
 
-    // Synthetic phase tick thresholds — aligned with Fabric mixin timing.
+    // Synthetic phase tick thresholds aligned with Fabric mixin timing.
     // Extracted to constants so they can be tuned or tested independently.
     static final long PHASE_START_END            = 150L;
     static final long PHASE_SUMMON_PILLARS_END   = 650L;
@@ -215,3 +219,5 @@ public final class EndRespawnWatcher {
 
     }
 }
+
+

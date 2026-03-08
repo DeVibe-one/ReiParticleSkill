@@ -25,11 +25,16 @@ import com.reiasu.reiparticlesapi.event.events.particle.emitter.EmitterRemoveEve
 import com.reiasu.reiparticlesapi.testutil.UnsafeAllocator;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -144,6 +149,35 @@ class ParticleEmittersManagerTest {
     }
 
     @Test
+    void shouldEnforceConfiguredEmitterLimitUnderConcurrentSpawn() throws InterruptedException {
+        APIConfig.INSTANCE.setParticleCountLimit(1);
+        ServerLevel level = UnsafeAllocator.allocate(ServerLevel.class);
+        int concurrentSpawns = 8;
+        CountDownLatch enteredBind = new CountDownLatch(concurrentSpawns);
+        CountDownLatch releaseBind = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(concurrentSpawns);
+        try {
+            for (int i = 0; i < concurrentSpawns; i++) {
+                executor.submit(() -> ParticleEmittersManager.spawnEmitters(
+                        new BlockingBindEmitter(enteredBind, releaseBind),
+                        level,
+                        1.0,
+                        2.0,
+                        3.0));
+            }
+            assertTrue(enteredBind.await(5, TimeUnit.SECONDS));
+            releaseBind.countDown();
+            executor.shutdown();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+        } finally {
+            releaseBind.countDown();
+            executor.shutdownNow();
+        }
+
+        assertEquals(1, ParticleEmittersManager.activeCount());
+    }
+
+    @Test
     void clearShouldPublishRemoveEventForEveryServerEmitter() {
         RemoveListener listener = new RemoveListener();
         ReiEventBus.INSTANCE.registerListenerInstance("test", listener);
@@ -181,6 +215,31 @@ class ParticleEmittersManagerTest {
         @Override
         protected void emitTick() {
             emittedTicks++;
+        }
+    }
+
+    private static final class BlockingBindEmitter extends ParticleEmitters {
+        private final CountDownLatch enteredBind;
+        private final CountDownLatch releaseBind;
+
+        private BlockingBindEmitter(CountDownLatch enteredBind, CountDownLatch releaseBind) {
+            this.enteredBind = enteredBind;
+            this.releaseBind = releaseBind;
+        }
+
+        @Override
+        public ParticleEmitters bind(Level level, double x, double y, double z) {
+            super.bind(level, x, y, z);
+            enteredBind.countDown();
+            try {
+                if (!releaseBind.await(5, TimeUnit.SECONDS)) {
+                    throw new AssertionError("Timed out waiting to release bind barrier");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError("Interrupted while waiting for bind barrier", e);
+            }
+            return this;
         }
     }
 

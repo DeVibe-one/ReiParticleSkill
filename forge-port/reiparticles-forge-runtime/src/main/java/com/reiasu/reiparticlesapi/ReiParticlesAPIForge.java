@@ -14,8 +14,10 @@ import com.reiasu.reiparticlesapi.event.ReiEventBus;
 import com.reiasu.reiparticlesapi.event.events.server.ServerPostTickEvent;
 import com.reiasu.reiparticlesapi.event.events.server.ServerPreTickEvent;
 import com.reiasu.reiparticlesapi.network.ForgeReiParticlesNetwork;
+import com.reiasu.reiparticlesapi.network.ServerRuntimeStateReset;
 import com.reiasu.reiparticlesapi.network.ServerSyncPacketBudget;
 import com.reiasu.reiparticlesapi.network.animation.PathMotionManager;
+import com.reiasu.reiparticlesapi.network.particle.ServerParticleGroupManager;
 import com.reiasu.reiparticlesapi.network.particle.composition.manager.ParticleCompositionManager;
 import com.reiasu.reiparticlesapi.network.particle.emitters.ParticleEmittersManager;
 import com.reiasu.reiparticlesapi.network.particle.emitters.environment.wind.WindDirections;
@@ -42,6 +44,8 @@ import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
@@ -108,6 +112,8 @@ public final class ReiParticlesAPIForge {
                 onServerEndTick(event.getServer());
             }
         });
+        MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent event) -> onServerLifecycleReset("stopping"));
+        MinecraftForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> onServerLifecycleReset("stopped"));
     }
 
     private void registerCommands() {
@@ -157,11 +163,20 @@ public final class ReiParticlesAPIForge {
         safeTick("DisplayEntityManager.server", () -> DisplayEntityManager.INSTANCE.tickAll());
         safeTick("ParticleCompositionManager.server", () -> ParticleCompositionManager.INSTANCE.tickAll());
         safeTick("ParticleStyleManager.server", ParticleStyleManager::doTickServer);
+        safeTick("ServerParticleGroupManager.server", () -> ServerParticleGroupManager.INSTANCE.upgrade(server));
         safeTick("ServerRenderEntityManager.tick", () -> ServerRenderEntityManager.INSTANCE.tick());
         safeTick("ServerRenderEntityManager.upgrade", () -> ServerRenderEntityManager.INSTANCE.upgrade(server));
         safeTick("TestManager", () -> TestManager.INSTANCE.doTickServer());
         safeTick("ReiScheduler.server", () -> ReiScheduler.INSTANCE.doServerTick());
         safeTick("ServerPostTickEvent", () -> ReiEventBus.call(new ServerPostTickEvent(server)));
+    }
+
+    private void onServerLifecycleReset(String phase) {
+        try {
+            ServerRuntimeStateReset.reset();
+        } catch (Exception e) {
+            LOGGER.warn("Server runtime reset during {} failed", phase, e);
+        }
     }
 
     private static final Map<String, Long> LAST_ERROR_LOG = new ConcurrentHashMap<>();
@@ -196,5 +211,4 @@ public final class ReiParticlesAPIForge {
         LOGGER.info("Registered ReiParticlesAPI particle providers (7 types)");
     }
 }
-
 

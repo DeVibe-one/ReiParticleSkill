@@ -5,13 +5,11 @@ package com.reiasu.reiparticlesapi.network.particle.composition.manager;
 import com.mojang.logging.LogUtils;
 import com.reiasu.reiparticlesapi.annotations.codec.BufferCodec;
 import com.reiasu.reiparticlesapi.annotations.composition.handler.ParticleCompositionHelper;
-import com.reiasu.reiparticlesapi.network.ReiParticlesNetwork;
 import com.reiasu.reiparticlesapi.network.packet.PacketParticleCompositionS2C;
 import com.reiasu.reiparticlesapi.network.particle.composition.ParticleComposition;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
@@ -38,6 +36,8 @@ public final class ParticleCompositionManager {
     private final Map<String, BufferCodec<ParticleComposition>> registeredCodecs = new ConcurrentHashMap<>();
     private final Map<Class<? extends ParticleComposition>, String> typeIdsByClass = new ConcurrentHashMap<>();
     private final Map<UUID, Set<UUID>> visibleByPlayer = new ConcurrentHashMap<>();
+    private final ParticleCompositionVisibilityTracker visibilityTracker =
+            new ParticleCompositionVisibilityTracker(visibleByPlayer, this::buildPacket);
     private final Set<String> warnedUnregisteredTypes = ConcurrentHashMap.newKeySet();
 
     private ParticleCompositionManager() {
@@ -99,9 +99,9 @@ public final class ParticleCompositionManager {
             compositions.add(composition);
             serverView.put(composition.getControlUUID(), composition);
         }
-        syncVisible(composition,
-                composition.getWorld() instanceof ServerLevel level ? level : null,
-                null);
+        if (composition.getWorld() instanceof ServerLevel level) {
+            visibilityTracker.syncSpawnVisible(composition, level);
+        }
         composition.clearDirty();
     }
 
@@ -111,6 +111,7 @@ public final class ParticleCompositionManager {
     }
 
     public void tickAll() {
+        long visibilityTick = visibilityTracker.beginTick();
         synchronized (compositions) {
             Iterator<ParticleComposition> iterator = compositions.iterator();
             while (iterator.hasNext()) {
@@ -126,16 +127,24 @@ public final class ParticleCompositionManager {
                 if (composition.getCanceled()) {
                     iterator.remove();
                     serverView.remove(composition.getControlUUID());
-                    removeTrackedVisibility(composition, serverLevel);
+                    visibilityTracker.removeAllViews(composition, serverLevel);
                     continue;
                 }
                 PacketParticleCompositionS2C dirtyPacket = composition.consumeDirty()
                         ? buildPacket(composition, false)
                         : null;
-                syncVisible(composition, serverLevel, dirtyPacket);
+                if (serverLevel == null) {
+                    visibilityTracker.removeAllViews(composition, null);
+                    continue;
+                }
+                visibilityTracker.updateClientVisible(composition, serverLevel, visibilityTick, dirtyPacket);
             }
         }
-        pruneDisconnectedPlayers();
+        if (serverView.isEmpty()) {
+            visibilityTracker.clear();
+        } else {
+            visibilityTracker.pruneDisconnectedPlayers(serverView.values());
+        }
     }
 
     public void tickClient() {
@@ -170,7 +179,7 @@ public final class ParticleCompositionManager {
         clientView.clear();
     }
 
-    public void clear() {
+    public void clearServer() {
         synchronized (compositions) {
             for (ParticleComposition composition : compositions) {
                 composition.cancel();
@@ -178,7 +187,11 @@ public final class ParticleCompositionManager {
             compositions.clear();
         }
         serverView.clear();
-        visibleByPlayer.clear();
+        visibilityTracker.clear();
+    }
+
+    public void clear() {
+        clearServer();
         clearClient();
     }
 
@@ -210,82 +223,6 @@ public final class ParticleCompositionManager {
         return packet;
     }
 
-    private void syncVisible(ParticleComposition composition,
-                             ServerLevel level,
-                             PacketParticleCompositionS2C dirtyPacket) {
-        if (composition == null) {
-            return;
-        }
-        if (level == null) {
-            removeTrackedVisibility(composition, null);
-            return;
-        }
-
-        UUID compositionId = composition.getControlUUID();
-        PacketParticleCompositionS2C packetForVisiblePlayers = dirtyPacket;
-        for (ServerPlayer player : level.players()) {
-            Set<UUID> visibleSet = visibleByPlayer.computeIfAbsent(player.getUUID(), ignored -> ConcurrentHashMap.newKeySet());
-            boolean shouldView = canView(composition, player);
-            boolean alreadyVisible = visibleSet.contains(compositionId);
-
-            if (!shouldView && alreadyVisible) {
-                visibleSet.remove(compositionId);
-                PacketParticleCompositionS2C removePacket = buildPacket(composition, true);
-                if (removePacket != null) {
-                    ReiParticlesNetwork.sendTo(player, removePacket);
-                }
-                continue;
-            }
-            if (shouldView && !alreadyVisible) {
-                if (packetForVisiblePlayers == null) {
-                    packetForVisiblePlayers = buildPacket(composition, false);
-                }
-                if (packetForVisiblePlayers == null) {
-                    continue;
-                }
-                visibleSet.add(compositionId);
-                ReiParticlesNetwork.sendTo(player, packetForVisiblePlayers);
-                continue;
-            }
-            if (shouldView && packetForVisiblePlayers != null) {
-                ReiParticlesNetwork.sendTo(player, packetForVisiblePlayers);
-            }
-        }
-    }
-
-    private void removeTrackedVisibility(ParticleComposition composition, ServerLevel level) {
-        PacketParticleCompositionS2C removePacket = buildPacket(composition, true);
-        UUID compositionId = composition.getControlUUID();
-        for (Map.Entry<UUID, Set<UUID>> entry : visibleByPlayer.entrySet()) {
-            if (!entry.getValue().remove(compositionId) || level == null || removePacket == null) {
-                continue;
-            }
-            ServerPlayer player = level.getServer().getPlayerList().getPlayer(entry.getKey());
-            if (player != null) {
-                ReiParticlesNetwork.sendTo(player, removePacket);
-            }
-        }
-    }
-
-    private void pruneDisconnectedPlayers() {
-        if (serverView.isEmpty()) {
-            visibleByPlayer.clear();
-            return;
-        }
-        net.minecraft.server.MinecraftServer server = null;
-        for (ParticleComposition composition : serverView.values()) {
-            if (composition.getWorld() instanceof ServerLevel level) {
-                server = level.getServer();
-                break;
-            }
-        }
-        if (server == null) {
-            return;
-        }
-        net.minecraft.server.MinecraftServer runtime = server;
-        visibleByPlayer.entrySet().removeIf(entry -> runtime.getPlayerList().getPlayer(entry.getKey()) == null);
-    }
-
     private String resolveTypeId(ParticleComposition composition) {
         if (composition == null) {
             return null;
@@ -303,19 +240,4 @@ public final class ParticleCompositionManager {
             LOGGER.warn("Particle composition {} is not registered for network sync; skipping client synchronization", className);
         }
     }
-
-    private static boolean canView(ParticleComposition composition, ServerPlayer player) {
-        if (composition == null || player == null || composition.getWorld() == null) {
-            return false;
-        }
-        if (player.isRemoved() || player.isSpectator()) {
-            return false;
-        }
-        if (composition.getWorld() != player.level()) {
-            return false;
-        }
-        return composition.getPosition().distanceTo(player.position()) <= Math.max(0.0, composition.getVisibleRange());
-    }
 }
-
-

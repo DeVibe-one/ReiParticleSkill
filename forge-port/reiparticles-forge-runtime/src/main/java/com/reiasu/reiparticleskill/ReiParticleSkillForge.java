@@ -2,6 +2,7 @@
 // Copyright (C) 2025 Reiasu
 package com.reiasu.reiparticleskill;
 
+import com.mojang.logging.LogUtils;
 import com.reiasu.reiparticlesapi.ReiParticlesAPI;
 import com.reiasu.reiparticlesapi.runtime.registration.RuntimePortAutoRegistrar;
 import com.reiasu.reiparticleskill.command.ReiParticleSkillDebugCommand;
@@ -19,10 +20,12 @@ import com.reiasu.reiparticleskill.listener.ServerListener;
 import com.reiasu.reiparticleskill.registry.ForgeSkillEnchantments;
 import com.reiasu.reiparticleskill.registry.ForgeSkillEntityTypes;
 import com.reiasu.reiparticleskill.registry.ForgeSkillSoundEvents;
-import com.mojang.logging.LogUtils;
+import com.reiasu.reiparticleskill.runtime.SkillRuntimeStateReset;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
@@ -55,6 +58,8 @@ public final class ReiParticleSkillForge {
                 ServerListener.onServerPostTick(event.getServer());
             }
         });
+        MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent event) -> onServerLifecycleReset("stopping"));
+        MinecraftForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> onServerLifecycleReset("stopped"));
 
         ReiParticlesAPI.init();
         ReiParticlesAPI.INSTANCE.loadScannerPackages();
@@ -70,6 +75,14 @@ public final class ReiParticleSkillForge {
 
     private void onClientSetup() {
         LOGGER.info("ReiParticleSkill client setup completed");
+    }
+
+    private void onServerLifecycleReset(String phase) {
+        try {
+            SkillRuntimeStateReset.reset(endRespawnBridge, LOGGER);
+        } catch (RuntimeException e) {
+            LOGGER.warn("Skill runtime reset during {} failed", phase, e);
+        }
     }
 
     private void onRegisterCommands(com.mojang.brigadier.CommandDispatcher<net.minecraft.commands.CommandSourceStack> dispatcher) {

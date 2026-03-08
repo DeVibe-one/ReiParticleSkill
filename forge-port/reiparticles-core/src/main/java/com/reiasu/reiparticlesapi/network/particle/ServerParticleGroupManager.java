@@ -73,6 +73,16 @@ public final class ServerParticleGroupManager {
         }
     }
 
+    public void clear() {
+        for (ServerParticleGroup group : groups.values()) {
+            group.setCanceled(true);
+            group.setValid(false);
+        }
+        groups.clear();
+        visible.clear();
+        visibilityTick = 0L;
+    }
+
     /**
      * Returns the set of player UUIDs that can currently see the given group.
      */
@@ -104,7 +114,6 @@ public final class ServerParticleGroupManager {
         if (server == null) {
             return;
         }
-        ServerSyncPacketBudget.beginServerTick(server.getTickCount());
         clearOfflineVisible(server);
         long tick = beginVisibilityTick();
 
@@ -267,3 +276,4 @@ public final class ServerParticleGroupManager {
         return true;
     }
 }
+

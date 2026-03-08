@@ -72,18 +72,26 @@ public class AnimateManager {
         }
     }
 
-    public void clear() {
+    public void clearServer() {
         synchronized (serverActive) {
             for (Animate animate : serverActive) {
                 animate.cancel();
             }
             serverActive.clear();
         }
+    }
+
+    public void clearClient() {
         synchronized (clientActive) {
             for (Animate animate : clientActive) {
                 animate.cancel();
             }
             clientActive.clear();
         }
+    }
+
+    public void clear() {
+        clearServer();
+        clearClient();
     }
 }

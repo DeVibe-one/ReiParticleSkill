@@ -56,19 +56,20 @@ final class ParticleEmitterRuntime {
         if (!(emitter instanceof ParticleEmitters particleEmitters)) {
             return;
         }
-        int emitterLimit = APIConfig.INSTANCE.getParticleCountLimit();
-        synchronized (emitters) {
-            if (emitters.size() >= emitterLimit) {
-                return;
-            }
-        }
         if (level != null) {
             particleEmitters.bind(level, x, y, z);
         }
+        boolean spawned = false;
+        int emitterLimit = APIConfig.INSTANCE.getParticleCountLimit();
         synchronized (emitters) {
-            emitters.add(particleEmitters);
+            if (emitters.size() < emitterLimit) {
+                emitters.add(particleEmitters);
+                spawned = true;
+            }
         }
-        ReiEventBus.call(new EmitterSpawnEvent(particleEmitters, false));
+        if (spawned) {
+            ReiEventBus.call(new EmitterSpawnEvent(particleEmitters, false));
+        }
     }
 
     void createOrChangeClient(ParticleEmitters emitters, Level viewWorld) {
@@ -125,6 +126,16 @@ final class ParticleEmitterRuntime {
         synchronized (emitters) {
             return emitters.size();
         }
+    }
+
+    void clearServer() {
+        synchronized (emitters) {
+            for (ParticleEmitters emitter : emitters) {
+                discardServerEmitter(emitter, false);
+            }
+            emitters.clear();
+        }
+        visibilityTracker.clear();
     }
 
     void clear() {

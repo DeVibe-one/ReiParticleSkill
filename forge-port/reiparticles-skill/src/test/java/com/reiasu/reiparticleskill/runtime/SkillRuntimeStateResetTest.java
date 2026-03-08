@@ -16,130 +16,112 @@
  * along with ReiParticleSkill. If not, see <https://www.gnu.org/licenses/>.
  */
 // SPDX-License-Identifier: LGPL-3.0-only
-package com.reiasu.reiparticleskill.barrages;
+package com.reiasu.reiparticleskill.runtime;
 
 import com.reiasu.reiparticlesapi.barrages.Barrage;
 import com.reiasu.reiparticlesapi.barrages.BarrageHitResult;
-import com.reiasu.reiparticlesapi.barrages.BarrageManager;
 import com.reiasu.reiparticlesapi.barrages.BarrageOption;
 import com.reiasu.reiparticlesapi.barrages.HitBox;
 import com.reiasu.reiparticlesapi.network.particle.ServerController;
-import com.reiasu.reiparticlesapi.testutil.UnsafeAllocator;
+import com.reiasu.reiparticlesapi.utils.RelativeLocation;
+import com.reiasu.reiparticleskill.barrages.SkillBarrageManager;
+import com.reiasu.reiparticleskill.display.group.ServerDisplayGroupManager;
+import com.reiasu.reiparticleskill.display.group.ServerOnlyDisplayGroup;
+import com.reiasu.reiparticleskill.end.respawn.EndRespawnPhase;
+import com.reiasu.reiparticleskill.end.respawn.EndRespawnSnapshot;
+import com.reiasu.reiparticleskill.end.respawn.EndRespawnStateBridge;
+import com.reiasu.reiparticleskill.end.respawn.EndRespawnWatcher;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class SkillBarrageManagerTest {
+class SkillRuntimeStateResetTest {
     @AfterEach
-    void tearDown() {
+    void tearDown() throws Exception {
         SkillBarrageManager.INSTANCE.clear();
+        ServerDisplayGroupManager.INSTANCE.clear();
+        syntheticTrackers().clear();
     }
 
     @Test
-    void invalidBarragesArePrunedAfterTick() {
-        SkillBarrageManager.INSTANCE.spawn(new DummyBarrage(1));
-        SkillBarrageManager.INSTANCE.spawn(new DummyBarrage(3));
-        assertEquals(2, SkillBarrageManager.INSTANCE.activeCount());
+    void resetShouldClearTrackedServerRuntimeState() throws Exception {
+        SkillBarrageManager.INSTANCE.spawn(new DummyBarrage());
+        ServerDisplayGroupManager.INSTANCE.spawn(new DummyDisplayGroup());
+        EndRespawnStateBridge bridge = activeBridge();
+        syntheticTrackers().put("test", newSyntheticTracker());
 
-        SkillBarrageManager.INSTANCE.tickAll();
-        assertEquals(1, SkillBarrageManager.INSTANCE.activeCount());
-
-        SkillBarrageManager.INSTANCE.tickAll();
-        assertEquals(1, SkillBarrageManager.INSTANCE.activeCount());
-
-        SkillBarrageManager.INSTANCE.tickAll();
-        assertEquals(0, SkillBarrageManager.INSTANCE.activeCount());
-    }
-
-    @Test
-    void spawnShouldRegisterWithCoreBarrageManagerForCollisionQueries() {
-        ServerLevel world = UnsafeAllocator.allocate(ServerLevel.class);
-        DummyBarrage barrage = new DummyBarrage(world, 8);
-
-        SkillBarrageManager.INSTANCE.spawn(barrage);
-
-        assertTrue(barrage.getLaunch());
-        assertSame(barrage, BarrageManager.INSTANCE.collectClipBarrages(world, new AABB(-1.0, -1.0, -1.0, 1.0, 1.0, 1.0)).get(0));
-    }
-
-    @Test
-    void shouldContinueTickingAfterBarrageFailure() {
-        DummyBarrage failing = new DummyBarrage(null, 8, true, false);
-        DummyBarrage healthy = new DummyBarrage(8);
-        SkillBarrageManager.INSTANCE.spawn(failing);
-        SkillBarrageManager.INSTANCE.spawn(healthy);
-
-        SkillBarrageManager.INSTANCE.tickAll();
-
-        assertEquals(1, healthy.getTickCount());
-        assertEquals(1, SkillBarrageManager.INSTANCE.activeCount());
-        assertSame(healthy, SkillBarrageManager.INSTANCE.snapshot().get(0));
-    }
-
-    @Test
-    void clearCancelsAndRemovesAll() {
-        SkillBarrageManager.INSTANCE.spawn(new DummyBarrage(8));
-        SkillBarrageManager.INSTANCE.spawn(new DummyBarrage(8));
-        assertEquals(2, SkillBarrageManager.INSTANCE.activeCount());
-
-        SkillBarrageManager.INSTANCE.clear();
+        SkillRuntimeStateReset.reset(bridge, LoggerFactory.getLogger(SkillRuntimeStateResetTest.class));
 
         assertEquals(0, SkillBarrageManager.INSTANCE.activeCount());
+        assertTrue(ServerDisplayGroupManager.INSTANCE.getGroups().isEmpty());
+        assertFalse(bridge.isActive());
+        assertTrue(syntheticTrackers().isEmpty());
     }
 
-    @Test
-    void clearShouldIgnoreControllerCleanupFailures() {
-        SkillBarrageManager.INSTANCE.spawn(new DummyBarrage(null, 8, false, true));
-        SkillBarrageManager.INSTANCE.spawn(new DummyBarrage(8));
+    private static EndRespawnStateBridge activeBridge() throws Exception {
+        EndRespawnStateBridge bridge = new EndRespawnStateBridge();
+        Field snapshot = EndRespawnStateBridge.class.getDeclaredField("snapshot");
+        snapshot.setAccessible(true);
+        snapshot.set(bridge, new EndRespawnSnapshot("test", Vec3.ZERO, EndRespawnPhase.START, 0L));
+        return bridge;
+    }
 
-        assertDoesNotThrow(() -> SkillBarrageManager.INSTANCE.clear());
-        assertEquals(0, SkillBarrageManager.INSTANCE.activeCount());
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> syntheticTrackers() throws Exception {
+        Field field = EndRespawnWatcher.class.getDeclaredField("SYNTHETIC_TRACKERS");
+        field.setAccessible(true);
+        return (Map<String, Object>) field.get(null);
+    }
+
+    private static Object newSyntheticTracker() throws Exception {
+        Class<?> type = Class.forName("com.reiasu.reiparticleskill.end.respawn.EndRespawnWatcher$SyntheticRespawnTracker");
+        Constructor<?> constructor = type.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        return constructor.newInstance();
+    }
+
+    private static final class DummyDisplayGroup extends ServerOnlyDisplayGroup {
+        private DummyDisplayGroup() {
+            super(Vec3.ZERO, null);
+        }
+
+        @Override
+        public Map<Supplier<Object>, RelativeLocation> getDisplayers() {
+            return Map.of();
+        }
+
+        @Override
+        public void tick() {
+        }
+
+        @Override
+        public void onDisplay() {
+        }
     }
 
     private static final class DummyBarrage implements Barrage {
-        private final int maxTick;
         private final UUID uuid = UUID.randomUUID();
         private final BarrageOption option = new BarrageOption();
         private final HitBox hitBox = HitBox.of(1.0, 1.0, 1.0);
-        private final DummyController controller;
-        private final ServerLevel world;
+        private final DummyController controller = new DummyController();
         private Vec3 loc = Vec3.ZERO;
         private Vec3 direction = new Vec3(0.0, 0.0, 1.0);
         private boolean launch;
         private boolean valid = true;
-        private int tick;
         private LivingEntity shooter;
-        private final boolean failOnTick;
-
-        private DummyBarrage(int maxTick) {
-            this(null, maxTick, false, false);
-        }
-
-        private DummyBarrage(ServerLevel world, int maxTick) {
-            this(world, maxTick, false, false);
-        }
-
-        private DummyBarrage(ServerLevel world, int maxTick, boolean failOnTick, boolean failOnCancel) {
-            this.maxTick = maxTick;
-            this.world = world;
-            this.failOnTick = failOnTick;
-            this.controller = new DummyController(failOnCancel);
-        }
-
-        int getTickCount() {
-            return tick;
-        }
 
         @Override
         public Vec3 getLoc() {
@@ -153,7 +135,7 @@ class SkillBarrageManagerTest {
 
         @Override
         public ServerLevel getWorld() {
-            return world;
+            return null;
         }
 
         @Override
@@ -232,27 +214,11 @@ class SkillBarrageManagerTest {
 
         @Override
         public void tick() {
-            if (failOnTick) {
-                throw new IllegalStateException("boom");
-            }
-            if (!launch || !valid) {
-                return;
-            }
-            tick++;
-            if (tick >= maxTick) {
-                valid = false;
-                controller.cancel();
-            }
         }
     }
 
     private static final class DummyController implements ServerController<DummyController> {
-        private final boolean failOnCancel;
         private boolean canceled;
-
-        private DummyController(boolean failOnCancel) {
-            this.failOnCancel = failOnCancel;
-        }
 
         @Override
         public boolean getCanceled() {
@@ -261,9 +227,6 @@ class SkillBarrageManagerTest {
 
         @Override
         public void cancel() {
-            if (failOnCancel) {
-                throw new IllegalStateException("boom");
-            }
             canceled = true;
         }
     }

@@ -59,6 +59,16 @@ public final class ServerRenderEntityManager {
         clearTrackedView(entity, true);
     }
 
+    public void clear() {
+        for (RenderEntity entity : new ArrayList<>(entities.values())) {
+            entity.setCanceled(true);
+            clearTrackedView(entity, false);
+        }
+        entities.clear();
+        playerViewable.clear();
+        visibilityTick = 0L;
+    }
+
     public void tick() {
         Iterator<Map.Entry<UUID, RenderEntity>> it = entities.entrySet().iterator();
         while (it.hasNext()) {
@@ -241,4 +251,6 @@ public final class ServerRenderEntityManager {
         });
     }
 }
+
+
 

@@ -2,6 +2,9 @@
 // Copyright (C) 2025 Reiasu
 package com.reiasu.reiparticlesapi.network.particle.style;
 
+import com.reiasu.reiparticlesapi.config.APIConfig;
+import com.reiasu.reiparticlesapi.network.ServerSyncPacketBudget;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -14,6 +17,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class ParticleStyleVisibilityTrackerTest {
+    @AfterEach
+    void cleanup() {
+        APIConfig.INSTANCE.setPacketsPerTickLimit(512);
+    }
+
     @Test
     void computeLodIntervalScalesWithViewerDistance() {
         assertEquals(1, ParticleStyleVisibilityTracker.computeLodInterval(5.0, 100.0));
@@ -46,5 +54,28 @@ final class ParticleStyleVisibilityTrackerTest {
             return true;
         }));
         assertEquals(0, sendAttempts.get());
+    }
+
+    @Test
+    void shouldRespectSharedPacketBudgetWhenTrackingNewStyle() {
+        Set<UUID> visible = new HashSet<>();
+        APIConfig.INSTANCE.setPacketsPerTickLimit(16);
+        ServerSyncPacketBudget.beginServerTick(System.nanoTime());
+
+        for (int i = 0; i < 16; i++) {
+            UUID styleId = UUID.randomUUID();
+            assertTrue(ParticleStyleVisibilityTracker.markVisibleAfterSuccessfulSend(
+                    visible,
+                    styleId,
+                    ServerSyncPacketBudget::tryAcquire));
+        }
+
+        UUID throttledStyleId = UUID.randomUUID();
+        assertFalse(ParticleStyleVisibilityTracker.markVisibleAfterSuccessfulSend(
+                visible,
+                throttledStyleId,
+                ServerSyncPacketBudget::tryAcquire));
+        assertFalse(visible.contains(throttledStyleId));
+        assertEquals(16, visible.size());
     }
 }

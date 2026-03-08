@@ -169,11 +169,9 @@ public final class DisplayEntityManager {
         clientView.clear();
     }
 
-    public void clear() {
+    public void clearServer() {
         synchronized (displays) {
             for (DisplayEntity display : displays) {
-                ServerLevel level = display.level() instanceof ServerLevel serverLevel ? serverLevel : null;
-                visibilityTracker.removeAllViews(display, level);
                 display.cancel();
             }
             displays.clear();
@@ -181,6 +179,10 @@ public final class DisplayEntityManager {
         serverView.clear();
         pendingDirtySyncs.clear();
         visibilityTracker.clear();
+    }
+
+    public void clear() {
+        clearServer();
         for (DisplayEntity display : clientView.values()) {
             display.cancel();
         }
@@ -208,3 +210,4 @@ public final class DisplayEntityManager {
         return display.typeId() != null && !display.typeId().isBlank();
     }
 }
+

@@ -5,7 +5,9 @@ package com.reiasu.reiparticlesapi.network.particle;
 import com.reiasu.reiparticlesapi.network.buffer.ParticleControllerDataBuffer;
 import com.reiasu.reiparticlesapi.network.packet.PacketParticleGroupS2C;
 import com.reiasu.reiparticlesapi.particles.control.group.ControllableParticleGroup;
+import com.reiasu.reiparticlesapi.testutil.UnsafeAllocator;
 import com.reiasu.reiparticlesapi.utils.RelativeLocation;
+import net.minecraft.server.dedicated.DedicatedServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +40,16 @@ class ServerParticleGroupManagerTest {
         assertEquals(1, healthy.ticks);
         assertEquals(1, ServerParticleGroupManager.INSTANCE.getGroups().size());
         assertSame(healthy, ServerParticleGroupManager.INSTANCE.getGroups().get(healthy.getUuid()));
+    }
+
+    @Test
+    void upgradeShouldDriveTrackedGroups() {
+        CountingGroup group = new CountingGroup();
+        ServerParticleGroupManager.INSTANCE.getGroups().put(group.getUuid(), group);
+
+        ServerParticleGroupManager.INSTANCE.upgrade(UnsafeAllocator.allocate(DedicatedServer.class));
+
+        assertEquals(1, group.ticks);
     }
 
     @Test
@@ -138,3 +150,4 @@ class ServerParticleGroupManagerTest {
         }
     }
 }
+

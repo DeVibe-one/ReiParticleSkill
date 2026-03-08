@@ -2,59 +2,31 @@
 // Copyright (C) 2025 Reiasu
 package com.reiasu.reiparticleskill.barrages;
 
-import com.mojang.logging.LogUtils;
 import com.reiasu.reiparticlesapi.barrages.Barrage;
-import org.slf4j.Logger;
+import com.reiasu.reiparticlesapi.barrages.BarrageManager;
 
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public enum SkillBarrageManager {
     INSTANCE;
 
-    private static final Logger LOGGER = LogUtils.getLogger();
-
-    private final CopyOnWriteArrayList<Barrage> activeBarrages = new CopyOnWriteArrayList<>();
-
     public void spawn(Barrage barrage) {
-        if (barrage == null || !barrage.getValid()) {
-            return;
-        }
-        activeBarrages.add(barrage);
+        BarrageManager.INSTANCE.spawn(barrage);
     }
 
     public void tickAll() {
-        if (activeBarrages.isEmpty()) {
-            return;
-        }
-        activeBarrages.removeIf(barrage -> {
-            if (barrage == null || !barrage.getValid()) {
-                return true;
-            }
-            barrage.tick();
-            return !barrage.getValid();
-        });
+        BarrageManager.INSTANCE.doTick();
     }
 
     public void clear() {
-        for (Barrage barrage : activeBarrages) {
-            if (barrage == null) {
-                continue;
-            }
-            try {
-                barrage.getBindControl().cancel();
-            } catch (RuntimeException e) {
-                LOGGER.debug("Failed to cancel barrage control during cleanup", e);
-            }
-        }
-        activeBarrages.clear();
+        BarrageManager.INSTANCE.clear();
     }
 
     public int activeCount() {
-        return activeBarrages.size();
+        return BarrageManager.INSTANCE.activeCount();
     }
 
     public List<Barrage> snapshot() {
-        return List.copyOf(activeBarrages);
+        return BarrageManager.INSTANCE.snapshot();
     }
 }

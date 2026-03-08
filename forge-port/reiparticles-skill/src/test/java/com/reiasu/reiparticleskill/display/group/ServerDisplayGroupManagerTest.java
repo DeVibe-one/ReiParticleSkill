@@ -26,12 +26,13 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ServerDisplayGroupManagerTest {
-
     @AfterEach
     void tearDown() {
         ServerDisplayGroupManager.INSTANCE.clear();
@@ -51,11 +52,44 @@ class ServerDisplayGroupManagerTest {
         assertEquals(0, ServerDisplayGroupManager.INSTANCE.getGroups().size());
     }
 
-    private static final class DummyGroup extends ServerOnlyDisplayGroup {
+    @Test
+    void shouldContinueTickingAfterGroupFailure() {
+        FailingTickGroup failing = new FailingTickGroup();
+        DummyGroup healthy = new DummyGroup(4);
+        ServerDisplayGroupManager.INSTANCE.spawn(failing);
+        ServerDisplayGroupManager.INSTANCE.spawn(healthy);
+
+        ServerDisplayGroupManager.INSTANCE.doTick();
+
+        assertEquals(1, healthy.getTickCount());
+        assertEquals(1, ServerDisplayGroupManager.INSTANCE.getGroups().size());
+        assertSame(healthy, ServerDisplayGroupManager.INSTANCE.getGroups().iterator().next());
+    }
+
+    @Test
+    void clearShouldIgnoreRemoveFailures() {
+        ServerDisplayGroupManager.INSTANCE.spawn(new FailingRemoveGroup());
+        ServerDisplayGroupManager.INSTANCE.spawn(new DummyGroup());
+
+        assertDoesNotThrow(() -> ServerDisplayGroupManager.INSTANCE.clear());
+        assertTrue(ServerDisplayGroupManager.INSTANCE.getGroups().isEmpty());
+    }
+
+    private static class DummyGroup extends ServerOnlyDisplayGroup {
+        private final int removeAfterTicks;
         private int ticks;
 
         private DummyGroup() {
+            this(2);
+        }
+
+        private DummyGroup(int removeAfterTicks) {
             super(Vec3.ZERO, null);
+            this.removeAfterTicks = removeAfterTicks;
+        }
+
+        int getTickCount() {
+            return ticks;
         }
 
         @Override
@@ -66,14 +100,27 @@ class ServerDisplayGroupManagerTest {
         @Override
         public void tick() {
             ticks++;
-            if (ticks >= 2) {
+            if (ticks >= removeAfterTicks) {
                 remove();
             }
         }
 
         @Override
         public void onDisplay() {
-            // no-op
+        }
+    }
+
+    private static final class FailingTickGroup extends DummyGroup {
+        @Override
+        public void tick() {
+            throw new IllegalStateException("boom");
+        }
+    }
+
+    private static final class FailingRemoveGroup extends DummyGroup {
+        @Override
+        public void remove() {
+            throw new IllegalStateException("boom");
         }
     }
 }

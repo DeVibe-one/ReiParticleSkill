@@ -65,6 +65,10 @@ public final class ParticleEmittersManager {
         return RUNTIME.activeCount();
     }
 
+    public static void clearServer() {
+        RUNTIME.clearServer();
+    }
+
     public static void clear() {
         RUNTIME.clear();
     }

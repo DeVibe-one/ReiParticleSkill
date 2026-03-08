@@ -99,11 +99,19 @@ public final class ReiScheduler {
         return enqueue(clientTaskQueue, createTask(1, action, true, maxLoopTick, preDelay));
     }
 
-    public void clear() {
+    public void clearServer() {
         cancelAndClear(serverTicks);
         cancelAndClear(serverTaskQueue);
+    }
+
+    public void clearClient() {
         cancelAndClear(clientTicks);
         cancelAndClear(clientTaskQueue);
+    }
+
+    public void clear() {
+        clearServer();
+        clearClient();
     }
 
     private static TickRunnable enqueue(ConcurrentLinkedQueue<TickRunnable> queue, TickRunnable task) {

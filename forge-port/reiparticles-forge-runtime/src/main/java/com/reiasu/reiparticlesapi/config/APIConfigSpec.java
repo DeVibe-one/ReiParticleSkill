@@ -18,16 +18,25 @@ public final class APIConfigSpec {
         INSTANCE.applyValues();
     }
 
+    private final ForgeConfigSpec.BooleanValue enabledParticleCountInject;
+    private final ForgeConfigSpec.BooleanValue enabledParticleAsync;
     private final ForgeConfigSpec.IntValue particleCountLimit;
+    private final ForgeConfigSpec.IntValue calculateThreadCount;
     private final ForgeConfigSpec.IntValue packetsPerTickLimit;
     private final ForgeConfigSpec.IntValue maxEmitterVisibleRange;
 
     private APIConfigSpec(ForgeConfigSpec.Builder builder) {
         builder.push("particles");
 
+        enabledParticleCountInject = builder.comment("Deprecated compatibility toggle. Currently has no runtime effect.")
+                .define("enabledParticleCountInject", true);
+        enabledParticleAsync = builder.comment("Deprecated compatibility toggle. Currently has no runtime effect.")
+                .define("enabledParticleAsync", true);
         particleCountLimit = builder.comment("Maximum number of active emitters tracked by the runtime (legacy key name retained for compatibility)")
                 .defineInRange("particleCountLimit", 131072, 1, 1_000_000);
-        packetsPerTickLimit = builder.comment("Maximum shared visibility-sync packets sent per server tick across emitters, styles, displays, render entities, and particle groups")
+        calculateThreadCount = builder.comment("Deprecated compatibility value. Currently has no runtime effect.")
+                .defineInRange("calculateThreadCount", 4, 1, 64);
+        packetsPerTickLimit = builder.comment("Maximum shared create/update visibility-sync packets sent per server tick across emitters, styles, displays, render entities, and particle groups. Remove packets are not throttled.")
                 .defineInRange("packetsPerTickLimit", 512, 16, 4096);
         maxEmitterVisibleRange = builder.comment("Maximum visible range (blocks) for emitter sync packets")
                 .defineInRange("maxEmitterVisibleRange", 256, 32, 1024);
@@ -44,7 +53,10 @@ public final class APIConfigSpec {
     }
 
     private void applyValues() {
+        APIConfig.INSTANCE.setEnabledParticleCountInject(enabledParticleCountInject.get());
+        APIConfig.INSTANCE.setEnabledParticleAsync(enabledParticleAsync.get());
         APIConfig.INSTANCE.setParticleCountLimit(particleCountLimit.get());
+        APIConfig.INSTANCE.setCalculateThreadCount(calculateThreadCount.get());
         APIConfig.INSTANCE.setPacketsPerTickLimit(packetsPerTickLimit.get());
         APIConfig.INSTANCE.setMaxEmitterVisibleRange(maxEmitterVisibleRange.get());
     }

@@ -35,9 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ParticleStyleManagerTest {
     @AfterEach
     void cleanup() {
-        ParticleStyleManager.getClientViewStyles().clear();
-        ParticleStyleManager.getServerViewStyles().clear();
-        ParticleStyleManager.getVisible().clear();
+        ParticleStyleManager.clear();
     }
 
     @Test
