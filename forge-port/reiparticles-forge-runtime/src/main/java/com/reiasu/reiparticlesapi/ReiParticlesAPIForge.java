@@ -46,6 +46,7 @@ import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
@@ -57,6 +58,7 @@ import org.slf4j.Logger;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 @Mod(ReiParticlesAPIForge.MOD_ID)
 public final class ReiParticlesAPIForge {
@@ -112,8 +114,14 @@ public final class ReiParticlesAPIForge {
                 onServerEndTick(event.getServer());
             }
         });
-        MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent event) -> onServerLifecycleReset("stopping"));
-        MinecraftForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> onServerLifecycleReset("stopped"));
+        registerServerLifecycleResetHooks(MinecraftForge.EVENT_BUS, this::onServerLifecycleReset);
+    }
+
+    static void registerServerLifecycleResetHooks(IEventBus eventBus, Consumer<String> resetAction) {
+        eventBus.addListener(net.minecraftforge.eventbus.api.EventPriority.NORMAL, false,
+                ServerStoppingEvent.class, event -> resetAction.accept("stopping"));
+        eventBus.addListener(net.minecraftforge.eventbus.api.EventPriority.NORMAL, false,
+                ServerStoppedEvent.class, event -> resetAction.accept("stopped"));
     }
 
     private void registerCommands() {
@@ -211,4 +219,8 @@ public final class ReiParticlesAPIForge {
         LOGGER.info("Registered ReiParticlesAPI particle providers (7 types)");
     }
 }
+
+
+
+
 

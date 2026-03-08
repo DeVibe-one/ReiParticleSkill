@@ -26,6 +26,7 @@ import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
@@ -34,6 +35,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Method;
+import java.util.function.Consumer;
 
 @Mod(ReiParticleSkillConstants.MOD_ID)
 public final class ReiParticleSkillForge {
@@ -58,8 +60,7 @@ public final class ReiParticleSkillForge {
                 ServerListener.onServerPostTick(event.getServer());
             }
         });
-        MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent event) -> onServerLifecycleReset("stopping"));
-        MinecraftForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> onServerLifecycleReset("stopped"));
+        registerServerLifecycleResetHooks(MinecraftForge.EVENT_BUS, this::onServerLifecycleReset);
 
         ReiParticlesAPI.init();
         ReiParticlesAPI.INSTANCE.loadScannerPackages();
@@ -71,6 +72,13 @@ public final class ReiParticleSkillForge {
         ReiParticlesAPI.INSTANCE.registerTest();
 
         LOGGER.info("ReiParticleSkill Forge runtime initialized");
+    }
+
+    static void registerServerLifecycleResetHooks(IEventBus eventBus, Consumer<String> resetAction) {
+        eventBus.addListener(net.minecraftforge.eventbus.api.EventPriority.NORMAL, false,
+                ServerStoppingEvent.class, event -> resetAction.accept("stopping"));
+        eventBus.addListener(net.minecraftforge.eventbus.api.EventPriority.NORMAL, false,
+                ServerStoppedEvent.class, event -> resetAction.accept("stopped"));
     }
 
     private void onClientSetup() {
@@ -133,3 +141,7 @@ public final class ReiParticleSkillForge {
         }
     }
 }
+
+
+
+
