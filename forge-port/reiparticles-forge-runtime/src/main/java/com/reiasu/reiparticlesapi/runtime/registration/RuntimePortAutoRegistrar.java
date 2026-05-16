@@ -3,6 +3,7 @@
 package com.reiasu.reiparticlesapi.runtime.registration;
 
 import com.reiasu.reiparticlesapi.annotations.ReiAutoRegister;
+import com.reiasu.reiparticlesapi.network.buffer.FriendlyByteBufs;
 import com.reiasu.reiparticlesapi.network.particle.emitters.ParticleEmitters;
 import com.reiasu.reiparticlesapi.network.particle.emitters.ParticleEmittersManager;
 import com.reiasu.reiparticlesapi.network.particle.style.ParticleGroupStyle;
@@ -11,7 +12,6 @@ import com.reiasu.reiparticlesapi.network.particle.style.ParticleStyleProvider;
 import com.reiasu.reiparticlesapi.reflect.ReiAPIScanner;
 import com.reiasu.reiparticlesapi.renderer.RenderEntity;
 import com.reiasu.reiparticlesapi.renderer.client.ClientRenderEntityManager;
-import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import org.slf4j.Logger;
@@ -106,7 +106,7 @@ public final class RuntimePortAutoRegistrar {
                     continue;
                 }
                 ClientRenderEntityManager.INSTANCE.registerCodec(renderId,
-                        data -> decoder.apply(new FriendlyByteBuf(Unpooled.wrappedBuffer(data))));
+                        data -> FriendlyByteBufs.decodeFromByteArray(data, decoder));
                 renderEntities++;
             }
         }

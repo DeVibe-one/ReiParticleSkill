@@ -12,10 +12,10 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.NavigableMap;
 import java.util.NavigableSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.stream.Collectors;
 
 /**
@@ -29,9 +29,9 @@ public final class ReiAPIScanner {
     public static final ReiAPIScanner INSTANCE = new ReiAPIScanner();
     private static final org.slf4j.Logger LOGGER = LogUtils.getLogger();
 
-    private final NavigableSet<String> scanPackages = new TreeSet<>();
-    private boolean loaded = false;
-    private final NavigableMap<String, SimpleClassInfo> classes = new TreeMap<>();
+    private final NavigableSet<String> scanPackages = new ConcurrentSkipListSet<>();
+    private volatile boolean loaded = false;
+    private final ConcurrentNavigableMap<String, SimpleClassInfo> classes = new ConcurrentSkipListMap<>();
 
     private ReiAPIScanner() {
     }

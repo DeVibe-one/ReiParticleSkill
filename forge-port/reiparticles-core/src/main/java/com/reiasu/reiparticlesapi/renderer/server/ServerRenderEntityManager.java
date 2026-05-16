@@ -144,7 +144,7 @@ public final class ServerRenderEntityManager {
                     continue;
                 }
                 if (shouldView && dirty) {
-                    double dist = entity.getPos().distanceTo(player.position());
+                    double dist = Math.sqrt(entity.getPos().distanceToSqr(player.position()));
                     int lodInterval = computeLodInterval(dist, entity.getRenderRange());
                     if (lodInterval > 1 && (entity.getAge() % lodInterval) != 0) {
                         deferredDirty = true;
@@ -193,7 +193,11 @@ public final class ServerRenderEntityManager {
         if (entity.getWorld() != player.level()) {
             return false;
         }
-        return entity.getPos().distanceTo(player.position()) <= entity.getRenderRange();
+        double renderRange = entity.getRenderRange();
+        if (renderRange < 0.0) {
+            return false;
+        }
+        return entity.getPos().distanceToSqr(player.position()) <= renderRange * renderRange;
     }
 
     private long beginVisibilityTick() {

@@ -2,6 +2,7 @@
 // Copyright (C) 2025 Reiasu
 package com.reiasu.reiparticlesapi.network.packet;
 
+import com.reiasu.reiparticlesapi.network.buffer.FriendlyByteBufs;
 import com.reiasu.reiparticlesapi.network.buffer.ParticleControllerDataBuffer;
 import com.reiasu.reiparticlesapi.network.buffer.ParticleControllerDataBuffers;
 import com.reiasu.reiparticlesapi.particles.control.ControlType;
@@ -36,12 +37,14 @@ public record PacketParticleStyleS2C(
         UUID uuid = buf.readUUID();
         ControlType type = ControlType.getTypeById(buf.readInt());
         int argsCount = buf.readInt();
+        if (argsCount < 0) {
+            throw new IllegalArgumentException("particle style args count must not be negative: " + argsCount);
+        }
         Map<String, ParticleControllerDataBuffer<?>> args = new HashMap<>();
         for (int i = 0; i < argsCount; i++) {
             int len = buf.readInt();
             String key = buf.readUtf();
-            byte[] raw = new byte[len];
-            buf.readBytes(raw);
+            byte[] raw = FriendlyByteBufs.readPayload(buf, len, "particle style arg payload");
             args.put(key, ParticleControllerDataBuffers.INSTANCE.decodeToBuffer(raw));
         }
         return new PacketParticleStyleS2C(uuid, type, args);

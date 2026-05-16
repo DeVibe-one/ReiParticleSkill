@@ -82,7 +82,7 @@ final class ParticleCompositionVisibilityTracker {
                 continue;
             }
             if (shouldView && dirtyPacket != null) {
-                double dist = player.position().distanceTo(composition.getPosition());
+                double dist = Math.sqrt(player.position().distanceToSqr(composition.getPosition()));
                 int lodInterval = computeLodInterval(dist, composition.getVisibleRange());
                 if (lodInterval > 1 && (tick % lodInterval) != 0) {
                     statSkippedLod++;
@@ -164,7 +164,8 @@ final class ParticleCompositionVisibilityTracker {
         if (composition.getWorld() != player.level()) {
             return false;
         }
-        return composition.getPosition().distanceTo(player.position()) <= Math.max(0.0, composition.getVisibleRange());
+        double visibleRange = Math.max(0.0, composition.getVisibleRange());
+        return composition.getPosition().distanceToSqr(player.position()) <= visibleRange * visibleRange;
     }
 
     static boolean markVisibleAfterSuccessfulSend(Set<UUID> visibleSet,

@@ -206,6 +206,12 @@ public final class ParticleCompositionManager {
         if (typeId == null) {
             return null;
         }
+        if (distanceRemove) {
+            PacketParticleCompositionS2C packet =
+                    new PacketParticleCompositionS2C(composition.getControlUUID(), typeId, new byte[0]);
+            packet.setDistanceRemove(true);
+            return packet;
+        }
         BufferCodec<ParticleComposition> codec = registeredCodecs.get(typeId);
         if (codec == null) {
             warnUnregisteredType(composition.getClass());

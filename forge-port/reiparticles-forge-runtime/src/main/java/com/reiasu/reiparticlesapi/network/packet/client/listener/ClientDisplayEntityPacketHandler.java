@@ -4,8 +4,8 @@ package com.reiasu.reiparticlesapi.network.packet.client.listener;
 
 import com.reiasu.reiparticlesapi.display.DisplayEntity;
 import com.reiasu.reiparticlesapi.display.DisplayEntityManager;
+import com.reiasu.reiparticlesapi.network.buffer.FriendlyByteBufs;
 import com.reiasu.reiparticlesapi.network.packet.PacketDisplayEntityS2C;
-import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 
@@ -30,8 +30,7 @@ public final class ClientDisplayEntityPacketHandler {
         if (decoder == null) {
             return;
         }
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.wrappedBuffer(packet.data()));
-        DisplayEntity display = decoder.apply(buf);
+        DisplayEntity display = FriendlyByteBufs.decodeFromByteArray(packet.data(), decoder);
         if (display == null) {
             return;
         }

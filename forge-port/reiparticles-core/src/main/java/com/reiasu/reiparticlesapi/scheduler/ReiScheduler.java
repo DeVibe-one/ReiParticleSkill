@@ -141,10 +141,12 @@ public final class ReiScheduler {
         private final Runnable action;
         private final boolean repeating;
         private final int maxTick; // -1 = infinite
+        private final Object stateLock = new Object();
         private int preDelay;
         private int currentTick;
-        private int loopCount;
-        private boolean cancelled;
+        private volatile int loopCount;
+        private volatile boolean cancelled;
+        private boolean actionInProgress;
         private Predicate<TickRunnable> cancelPredicate;
         private Runnable finishCallback;
 
@@ -156,17 +158,7 @@ public final class ReiScheduler {
         }
 
         public void cancel() {
-            if (cancelled) {
-                return;
-            }
-            this.cancelled = true;
-            if (finishCallback != null) {
-                try {
-                    finishCallback.run();
-                } catch (Exception e) {
-                    LOGGER.warn("Scheduler finish callback threw and was ignored", e);
-                }
-            }
+            runFinishCallback(markCancelled());
         }
 
         public boolean isCancelled() {
@@ -174,11 +166,21 @@ public final class ReiScheduler {
         }
 
         public void setCancelPredicate(Predicate<TickRunnable> predicate) {
-            this.cancelPredicate = predicate;
+            synchronized (stateLock) {
+                if (cancelled) {
+                    return;
+                }
+                this.cancelPredicate = predicate;
+            }
         }
 
         public void setFinishCallback(Runnable callback) {
-            this.finishCallback = callback;
+            synchronized (stateLock) {
+                if (cancelled) {
+                    return;
+                }
+                this.finishCallback = callback;
+            }
         }
 
         void setPreDelay(int preDelay) {
@@ -190,37 +192,86 @@ public final class ReiScheduler {
         }
 
         void doTick() {
-            if (cancelled) {
-                return;
-            }
-
-            if (preDelay > 0) {
-                preDelay--;
-                return;
-            }
-
-            currentTick++;
-
-            if (cancelPredicate != null && cancelPredicate.test(this)) {
-                cancel();
-                return;
-            }
-
-            if (!repeating) {
-                if (currentTick >= delay) {
-                    action.run();
-                    cancel();
+            Predicate<TickRunnable> predicate;
+            synchronized (stateLock) {
+                if (cancelled || actionInProgress) {
+                    return;
                 }
+
+                if (preDelay > 0) {
+                    preDelay--;
+                    return;
+                }
+
+                currentTick++;
+                predicate = cancelPredicate;
+            }
+
+            if (predicate != null && predicate.test(this)) {
+                runFinishCallback(markCancelled());
                 return;
             }
 
-            if (currentTick >= delay) {
+            synchronized (stateLock) {
+                if (cancelled || actionInProgress || currentTick < delay) {
+                    return;
+                }
+                actionInProgress = true;
+            }
+
+            boolean actionCompleted = false;
+            try {
                 action.run();
-                currentTick = 0;
-                loopCount++;
-                if (maxTick > 0 && loopCount >= maxTick) {
-                    cancel();
+                actionCompleted = true;
+            } finally {
+                if (!actionCompleted) {
+                    synchronized (stateLock) {
+                        actionInProgress = false;
+                    }
                 }
+            }
+
+            Runnable callback = null;
+            synchronized (stateLock) {
+                actionInProgress = false;
+                if (cancelled) {
+                    return;
+                }
+                if (!repeating) {
+                    callback = markCancelledLocked();
+                } else {
+                    currentTick = 0;
+                    loopCount++;
+                    if (maxTick > 0 && loopCount >= maxTick) {
+                        callback = markCancelledLocked();
+                    }
+                }
+            }
+            runFinishCallback(callback);
+        }
+
+        private Runnable markCancelled() {
+            synchronized (stateLock) {
+                return markCancelledLocked();
+            }
+        }
+
+        private Runnable markCancelledLocked() {
+            if (cancelled) {
+                return null;
+            }
+            cancelled = true;
+            return finishCallback;
+        }
+
+        private static void runFinishCallback(Runnable callback) {
+            if (callback == null) {
+                return;
+            }
+            try {
+                callback.run();
+            } catch (Exception e) {
+                LOGGER.warn("Scheduler finish callback threw and was ignored", e);
             }
         }
     }

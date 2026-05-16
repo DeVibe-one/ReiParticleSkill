@@ -44,8 +44,9 @@ public final class ServerCameraUtil {
         if (durationTicks <= 0) throw new IllegalArgumentException("durationTicks must be > 0");
 
         CameraShakeS2CPacket packet = new CameraShakeS2CPacket(range, origin, power, durationTicks);
+        double rangeSq = range * range;
         for (ServerPlayer player : world.players()) {
-            if (player.position().distanceTo(origin) <= range) {
+            if (player.position().distanceToSqr(origin) <= rangeSq) {
                 ReiParticlesNetwork.sendTo(player, packet);
             }
         }

@@ -27,9 +27,17 @@ import com.reiasu.reiparticlesapi.event.scanlate.LateScanListener;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReiEventBusTest {
     @AfterEach
@@ -90,10 +98,55 @@ class ReiEventBusTest {
         assertEquals(1, LateScanListener.CALLS.get());
     }
 
+    @Test
+    void shouldRetainConcurrentRegistrationsInSamePriorityBucket() throws Exception {
+        int listeners = 16;
+        int attempts = 100;
+        ExecutorService executor = Executors.newFixedThreadPool(listeners);
+        try {
+            for (int attempt = 0; attempt < attempts; attempt++) {
+                ReiEventBus.INSTANCE.clear();
+                ConcurrentRegistrationListener.CALLS.set(0);
+                CountDownLatch ready = new CountDownLatch(listeners);
+                CountDownLatch start = new CountDownLatch(1);
+                List<Future<?>> futures = new ArrayList<>();
+                for (int i = 0; i < listeners; i++) {
+                    futures.add(executor.submit(() -> {
+                        try {
+                            ready.countDown();
+                            if (!start.await(5, TimeUnit.SECONDS)) {
+                                throw new AssertionError("Timed out waiting to start concurrent listener registration");
+                            }
+                            ReiEventBus.INSTANCE.registerListenerInstance("test", new ConcurrentRegistrationListener());
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new AssertionError("Interrupted while waiting to register listener", e);
+                        }
+                    }));
+                }
+                assertTrue(ready.await(5, TimeUnit.SECONDS));
+                start.countDown();
+                for (Future<?> future : futures) {
+                    future.get(5, TimeUnit.SECONDS);
+                }
+
+                assertEquals(listeners, ReiEventBus.INSTANCE.handlerCount(ConcurrentRegistrationEvent.class), "attempt " + attempt);
+
+                ReiEventBus.call(new ConcurrentRegistrationEvent());
+                assertEquals(listeners, ConcurrentRegistrationListener.CALLS.get(), "attempt " + attempt);
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
     private static class BaseEvent extends ReiEvent {
     }
 
     private static final class ChildEvent extends BaseEvent {
+    }
+
+    private static final class ConcurrentRegistrationEvent extends ReiEvent {
     }
 
     private static final class InterruptEvent extends ReiEvent implements EventInterruptible {
@@ -198,6 +251,15 @@ class ReiEventBusTest {
                 order.append(',');
             }
             order.append(value);
+        }
+    }
+
+    private static final class ConcurrentRegistrationListener {
+        private static final AtomicInteger CALLS = new AtomicInteger();
+
+        @EventHandler(priority = EventPriority.NORMAL)
+        public void onEvent(ConcurrentRegistrationEvent event) {
+            CALLS.incrementAndGet();
         }
     }
 }

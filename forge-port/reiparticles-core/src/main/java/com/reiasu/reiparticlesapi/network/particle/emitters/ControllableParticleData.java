@@ -8,6 +8,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
+import javax.annotation.Nullable;
 import java.util.UUID;
 
 /**
@@ -122,6 +123,7 @@ public class ControllableParticleData implements SerializableData {
     // ---- Clone ----
 
     @Override
+    @Nullable
     public ParticleDisplayer createDisplayer() {
         return null; // Client-side only; server port returns null
     }
@@ -216,5 +218,6 @@ public class ControllableParticleData implements SerializableData {
         light = buf.readInt();
         visibleRange = buf.readFloat();
     }
+
 }
 

@@ -26,7 +26,7 @@ public final class ReiEventBus {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private final Map<String, Set<String>> pendingPackagesByMod = new ConcurrentHashMap<>();
-    private final Map<Class<? extends ReiEvent>, EnumMap<EventPriority, CopyOnWriteArrayList<EventExecutor>>> handlerLists =
+    private final Map<Class<? extends ReiEvent>, Map<EventPriority, CopyOnWriteArrayList<EventExecutor>>> handlerLists =
             new ConcurrentHashMap<>();
     private final Set<Class<?>> discoveredAnnotatedListeners = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean initialized = new AtomicBoolean(false);
@@ -109,7 +109,7 @@ public final class ReiEventBus {
     }
 
     public int handlerCount(Class<? extends ReiEvent> eventType) {
-        EnumMap<EventPriority, CopyOnWriteArrayList<EventExecutor>> bucket = handlerLists.get(eventType);
+        Map<EventPriority, CopyOnWriteArrayList<EventExecutor>> bucket = handlerLists.get(eventType);
         if (bucket == null) {
             return 0;
         }
@@ -139,7 +139,7 @@ public final class ReiEventBus {
         while (currentEventType != null && ReiEvent.class.isAssignableFrom(currentEventType)) {
             @SuppressWarnings("unchecked")
             Class<? extends ReiEvent> eventClass = (Class<? extends ReiEvent>) currentEventType;
-            EnumMap<EventPriority, CopyOnWriteArrayList<EventExecutor>> byPriority = handlerLists.get(eventClass);
+            Map<EventPriority, CopyOnWriteArrayList<EventExecutor>> byPriority = handlerLists.get(eventClass);
             if (byPriority != null) {
                 for (EventPriority priority : EventPriority.values()) {
                     CopyOnWriteArrayList<EventExecutor> executors = byPriority.get(priority);
@@ -170,10 +170,17 @@ public final class ReiEventBus {
             Class<? extends ReiEvent> eventType,
             EventPriority priority
     ) {
-        EnumMap<EventPriority, CopyOnWriteArrayList<EventExecutor>> byPriority =
-                handlerLists.computeIfAbsent(eventType, ignored -> new EnumMap<>(EventPriority.class));
-        CopyOnWriteArrayList<EventExecutor> executors =
-                byPriority.computeIfAbsent(priority, ignored -> new CopyOnWriteArrayList<>());
+        Map<EventPriority, CopyOnWriteArrayList<EventExecutor>> byPriority =
+                handlerLists.computeIfAbsent(eventType, ignored -> createHandlerBucket());
+        CopyOnWriteArrayList<EventExecutor> executors = byPriority.get(priority);
         executors.add(new EventExecutor(modId, event -> EventListenerInvocationSupport.invokeMethod(listener, method, event)));
+    }
+
+    private static Map<EventPriority, CopyOnWriteArrayList<EventExecutor>> createHandlerBucket() {
+        EnumMap<EventPriority, CopyOnWriteArrayList<EventExecutor>> bucket = new EnumMap<>(EventPriority.class);
+        for (EventPriority value : EventPriority.values()) {
+            bucket.put(value, new CopyOnWriteArrayList<>());
+        }
+        return bucket;
     }
 }

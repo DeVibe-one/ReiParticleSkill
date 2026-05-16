@@ -46,4 +46,5 @@ public final class InterpolatorVec3d implements InterpolatorData<Vec3> {
     public Vec3 getCurrent() {
         return value;
     }
+
 }

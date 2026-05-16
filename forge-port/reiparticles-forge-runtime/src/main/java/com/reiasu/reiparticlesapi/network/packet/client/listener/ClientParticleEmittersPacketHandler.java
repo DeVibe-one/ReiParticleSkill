@@ -2,10 +2,10 @@
 // Copyright (C) 2025 Reiasu
 package com.reiasu.reiparticlesapi.network.packet.client.listener;
 
+import com.reiasu.reiparticlesapi.network.buffer.FriendlyByteBufs;
 import com.reiasu.reiparticlesapi.network.packet.PacketParticleEmittersS2C;
 import com.reiasu.reiparticlesapi.network.particle.emitters.ParticleEmitters;
 import com.reiasu.reiparticlesapi.network.particle.emitters.ParticleEmittersManager;
-import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 
@@ -16,12 +16,19 @@ public final class ClientParticleEmittersPacketHandler {
     }
 
     public static void receive(PacketParticleEmittersS2C packet) {
+        if (packet.type() == PacketParticleEmittersS2C.PacketType.REMOVE) {
+            ParticleEmitters target = ParticleEmittersManager.getClientEmitters().get(packet.emitterUuid());
+            if (target != null) {
+                target.cancel();
+            }
+            return;
+        }
+
         Function<FriendlyByteBuf, ParticleEmitters> decoder = ParticleEmittersManager.getCodecFromID(packet.emitterKey());
         if (decoder == null) {
             return;
         }
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.wrappedBuffer(packet.emitterData()));
-        ParticleEmitters emitters = decoder.apply(buf);
+        ParticleEmitters emitters = FriendlyByteBufs.decodeFromByteArray(packet.emitterData(), decoder);
         if (emitters == null) {
             return;
         }
@@ -32,12 +39,7 @@ public final class ClientParticleEmittersPacketHandler {
                     ParticleEmittersManager.createOrChangeClient(emitters, minecraft.level);
                 }
             }
-            case REMOVE -> {
-                ParticleEmitters target = ParticleEmittersManager.getClientEmitters().get(emitters.getUuid());
-                if (target != null) {
-                    target.cancel();
-                }
-            }
+            case REMOVE -> throw new IllegalStateException("remove packets are handled before decode");
         }
     }
 }

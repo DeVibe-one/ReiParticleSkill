@@ -2,9 +2,8 @@
 // Copyright (C) 2025 Reiasu
 package com.reiasu.reiparticlesapi.event;
 
-import com.reiasu.reiparticlesapi.event.events.entity.EntityMoveEvent;
-import com.reiasu.reiparticlesapi.event.events.world.client.ClientWorldChangeEvent;
 import com.reiasu.reiparticlesapi.event.events.entity.EntityPostTickEvent;
+import com.reiasu.reiparticlesapi.event.events.entity.EntityMoveEvent;
 import com.reiasu.reiparticlesapi.event.events.entity.EntityPreMoveEvent;
 import com.reiasu.reiparticlesapi.event.events.entity.EntityPrePlaceBlockEvent;
 import com.reiasu.reiparticlesapi.event.events.entity.EntityPreTickEvent;
@@ -18,8 +17,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraft.client.Minecraft;
-import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
@@ -85,16 +82,8 @@ public final class ForgeEventForwarder {
             ReiEventBus.call(new EntityPostTickEvent(event.player));
         });
 
-        // Client/Server/World tick events are forwarded by ClientTickEventForwarder
-        // and ReiParticlesAPIForge lifecycle hooks to avoid duplication.
-
-        // Client world change (dimension switch / join)
-        MinecraftForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingIn event) -> {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.level != null) {
-                ReiEventBus.call(new ClientWorldChangeEvent(mc.level));
-            }
-        });
+        // Client tick and world lifecycle events are forwarded by
+        // ClientTickEventForwarder and ReiParticlesAPIForge lifecycle hooks.
 
         // Entity place block
         MinecraftForge.EVENT_BUS.addListener((BlockEvent.EntityPlaceEvent event) -> {

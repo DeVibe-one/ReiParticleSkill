@@ -10,6 +10,7 @@ import com.reiasu.reiparticleskill.end.respawn.runtime.emitter.EndCrystalStyleEm
 import com.reiasu.reiparticleskill.end.respawn.runtime.emitter.PillarFourierBeamEmitter;
 import com.reiasu.reiparticleskill.end.respawn.runtime.emitter.RespawnEmitter;
 import com.reiasu.reiparticleskill.end.respawn.runtime.emitter.ShockwaveWallEmitter;
+import com.reiasu.reiparticleskill.end.respawn.runtime.emitter.SummonFlashEmitter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
@@ -44,6 +45,7 @@ public final class DragonRespawnAnimationDirector {
     private EndRespawnPhase activePhase;
     private ServerLevel activeLevel;
     private boolean active;
+    private boolean endFinaleStarted;
     private int pillarPulseIndex;
 
     public void setup(ServerLevel level, Vec3 center) {
@@ -61,6 +63,7 @@ public final class DragonRespawnAnimationDirector {
         }
         activeLevel = level;
         if (activePhase != phase) {
+            endFinaleStarted = false;
             if (!shouldPreserveMidChain(activePhase, phase)) {
                 reconfigureEmittersForPhase(level, center, phase);
             }
@@ -82,7 +85,7 @@ public final class DragonRespawnAnimationDirector {
         if (phase == EndRespawnPhase.SUMMON_PILLARS) {
             maybeTriggerPillarPulse(level, center, phaseTick);
         }
-        if (phase == EndRespawnPhase.END && phaseTick == 0) {
+        if (phase == EndRespawnPhase.END && !endFinaleStarted) {
             handleEnd(level, center);
         }
         gravityTracker.tick(level);
@@ -112,6 +115,7 @@ public final class DragonRespawnAnimationDirector {
         activeEmitters.clear();
         pulseScopedEmitters.clear();
         activePillarCrafters.clear();
+        endFinaleStarted = false;
         pillarPulseIndex = 0;
         pulseTracker.clear();
         gravityTracker.clear();
@@ -174,7 +178,29 @@ public final class DragonRespawnAnimationDirector {
     }
 
     public void handleEnd(ServerLevel level, Vec3 center) {
-        activeEmitters.removeIf(emitter -> emitter instanceof EndBeamExplosionEmitter);
+        List<EndCrystal> crystals = level.getEntitiesOfClass(
+                EndCrystal.class,
+                new AABB(center, center).inflate(CRYSTAL_SEARCH_RADIUS),
+                EndCrystal::isAlive
+        );
+        if (startEndFinale(center, crystals)) {
+            gravityTracker.setNearestNoGravity(level, center.add(ANCHOR_OFFSET), GRAVITY_RANGE, 20L);
+        }
+    }
+
+    boolean startEndFinale(Vec3 center, List<EndCrystal> crystals) {
+        if (endFinaleStarted) {
+            return false;
+        }
+        endFinaleStarted = true;
+
+        activeEmitters.removeIf(emitter -> emitter instanceof EndBeamExplosionEmitter
+                || emitter instanceof SummonFlashEmitter
+                || emitter instanceof PillarFourierBeamEmitter
+                || emitter instanceof ShockwaveWallEmitter);
+        activeEmitters.add(new SummonFlashEmitter(1)
+                .setAnchorOffset(ANCHOR_OFFSET));
+
         EndBeamExplosionEmitter emitter = new EndBeamExplosionEmitter(160)
                 .setAnchorOffset(ANCHOR_OFFSET)
                 .setParticleMaxAge(130)
@@ -188,15 +214,10 @@ public final class DragonRespawnAnimationDirector {
                 .setSizeMax(1.8)
                 .setDrag(0.96);
         activeEmitters.add(emitter);
-        gravityTracker.setNearestNoGravity(level, center.add(ANCHOR_OFFSET), GRAVITY_RANGE, 20L);
 
         // Fourier beam eruption at each obsidian pillar
-        List<EndCrystal> crystals = level.getEntitiesOfClass(
-                EndCrystal.class,
-                new AABB(center, center).inflate(CRYSTAL_SEARCH_RADIUS),
-                EndCrystal::isAlive
-        );
-        for (EndCrystal crystal : crystals) {
+        List<EndCrystal> activeCrystals = crystals == null ? List.of() : crystals;
+        for (EndCrystal crystal : activeCrystals) {
             Vec3 base = crystal.position().add(0.0, -1.0, 0.0);
             activeEmitters.add(new PillarFourierBeamEmitter(base, 80));
         }
@@ -205,6 +226,7 @@ public final class DragonRespawnAnimationDirector {
 
         // Expanding shockwave wall from center
         activeEmitters.add(new ShockwaveWallEmitter(50));
+        return true;
     }
 
     private void reconfigureEmittersForPhase(ServerLevel level, Vec3 center, EndRespawnPhase phase) {
@@ -246,7 +268,8 @@ public final class DragonRespawnAnimationDirector {
                 activeEmitters.add(emitter);
                 clientEmitters.spawnForSummon(level, center);
             }
-            case END -> handleEnd(level, center);
+            case END -> {
+            }
         }
     }
 

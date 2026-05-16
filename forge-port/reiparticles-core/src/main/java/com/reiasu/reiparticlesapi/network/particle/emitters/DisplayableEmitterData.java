@@ -5,22 +5,25 @@ package com.reiasu.reiparticlesapi.network.particle.emitters;
 import com.reiasu.reiparticlesapi.network.particle.data.SerializableData;
 import com.reiasu.reiparticlesapi.particles.ParticleDisplayer;
 
+import javax.annotation.Nullable;
+
 /**
- * A {@link SerializableData} implementation for emitter display data.
+ * Stateless {@link SerializableData} marker for emitter display data.
  * <p>
- * All methods currently throw {@link UnsupportedOperationException} matching
- * the original Fabric source which also had "Not yet implemented" stubs.
- * This class exists as a placeholder type for emitter data factories.
+ * Emitter packets are displayed by {@link ParticleEmittersManager}; this type
+ * only preserves the legacy data-factory contract for callers that expect an
+ * emitter display data object.
  */
 public final class DisplayableEmitterData implements SerializableData {
 
     @Override
     public SerializableData clone() {
-        throw new UnsupportedOperationException("DisplayableEmitterData.clone() not yet implemented");
+        return this;
     }
 
     @Override
+    @Nullable
     public ParticleDisplayer createDisplayer() {
-        throw new UnsupportedOperationException("DisplayableEmitterData.createDisplayer() not yet implemented");
+        return null;
     }
 }

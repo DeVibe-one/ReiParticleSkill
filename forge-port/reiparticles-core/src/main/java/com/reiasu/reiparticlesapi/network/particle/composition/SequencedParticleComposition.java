@@ -6,6 +6,7 @@ import com.reiasu.reiparticlesapi.utils.Math3DUtil;
 import com.reiasu.reiparticlesapi.utils.RelativeLocation;
 import com.reiasu.reiparticlesapi.utils.helper.SequencedCompositionAnimationHelper;
 import com.reiasu.reiparticlesapi.utils.storage.Memo;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -172,6 +173,48 @@ public abstract class SequencedParticleComposition extends ParticleComposition {
 
     @Override
     protected void displayParticles() {
+        rebuildSequencedGeometry(null);
+    }
+
+    @Override
+    public void update(ParticleComposition other) {
+        boolean refreshTransform = getClient() && hasDisplayTransformChanged(other);
+        com.reiasu.reiparticlesapi.particles.Controllable<?>[] activeControls = refreshTransform
+                ? snapshotActiveControls()
+                : null;
+        long[] oldIndex = Arrays.copyOf(index.get(), index.get().length);
+        int oldCount = count;
+
+        super.update(other);
+        if (!(other instanceof SequencedParticleComposition seq)) return;
+
+        count = seq.count;
+        displayedParticleCount = seq.displayedParticleCount;
+        serverCurrentIndex = seq.serverCurrentIndex;
+        long[] newIndex = seq.index.get();
+        index.setMemoValue(Arrays.copyOf(newIndex, newIndex.length));
+
+        if (!getClient()) return;
+        if (oldCount != count || sequencedParticlesData.size() != count) {
+            clear(false);
+            rebuildSequencedGeometry(null);
+            recreateDisplayedParticlesFromIndex();
+            return;
+        }
+        if (refreshTransform) {
+            rebuildSequencedGeometry(activeControls);
+            refreshDisplayedParticleLocations();
+        }
+        applyIndexDiff(oldIndex, index.get());
+    }
+
+    @Override
+    public void toggleRelative() {
+        if (!getClient()) return;
+        refreshDisplayedParticleLocations();
+    }
+
+    private void rebuildSequencedGeometry(com.reiasu.reiparticlesapi.particles.Controllable<?>[] activeControls) {
         Map<CompositionData, RelativeLocation> locations = getParticles();
         int newCount = locations.size();
         ensureIndexCapacity(newCount);
@@ -187,29 +230,14 @@ public abstract class SequencedParticleComposition extends ParticleComposition {
         for (Map.Entry<CompositionData, RelativeLocation> entry : locations.entrySet()) {
             sequencedParticlesData.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
         }
+        getParticleRotatedLocations().clear();
         getParticleRotatedLocations().addAll(locations.values());
         if (indexToUuid.length != count) {
             indexToUuid = new UUID[count];
         }
-    }
-
-    @Override
-    public void update(ParticleComposition other) {
-        super.update(other);
-        if (!(other instanceof SequencedParticleComposition seq)) return;
-
-        long[] oldIndex = Arrays.copyOf(index.get(), index.get().length);
-        int oldCount = count;
-        count = seq.count;
-        displayedParticleCount = seq.displayedParticleCount;
-        serverCurrentIndex = seq.serverCurrentIndex;
-        index.setMemoValue(seq.index.get());
-
-        if (!getClient()) return;
-        if (oldCount != count || sequencedParticlesData.size() != count) {
-            flush();
+        if (activeControls != null) {
+            restoreActiveControls(activeControls);
         }
-        applyIndexDiff(oldIndex, index.get());
     }
 
     // ─── Rotation overrides ──────────────────────────────────────────────
@@ -342,7 +370,7 @@ public abstract class SequencedParticleComposition extends ParticleComposition {
     }
 
     public boolean isParticleDisplayed(int index) {
-        if (index < 0 || index > count) return false;
+        if (index < 0 || index >= count) return false;
         return getBit(this.index.get(), index);
     }
 
@@ -359,7 +387,7 @@ public abstract class SequencedParticleComposition extends ParticleComposition {
         Map.Entry<CompositionData, RelativeLocation> entry = sequencedParticlesData.get(i);
         CompositionData data = entry.getKey();
         RelativeLocation rl = entry.getValue();
-        displayEntry(data, rl);
+        displaySequencedEntry(data, rl);
         indexToUuid[i] = data.getUuid();
     }
 
@@ -377,8 +405,96 @@ public abstract class SequencedParticleComposition extends ParticleComposition {
                 ctrl.remove();
                 data.setControllable(null);
             }
+            getDisplayedEntries().remove(data);
         }
         indexToUuid[i] = null;
+    }
+
+    private void displaySequencedEntry(CompositionData data, RelativeLocation pos) {
+        getDisplayedEntries().add(data);
+        if (data.getDisplayerBuilder() == null) return;
+        if (!(getWorld() instanceof ClientLevel clientWorld)) return;
+
+        com.reiasu.reiparticlesapi.particles.ParticleDisplayer displayer = data.getDisplayerBuilder().get();
+        Vec3 spawnPos = getPosition().add(pos.getX(), pos.getY(), pos.getZ());
+        com.reiasu.reiparticlesapi.particles.Controllable<?> handle = displayer.display(spawnPos, clientWorld);
+        data.setControllable(handle);
+
+        if (handle != null && data.getParticleInit() != null) {
+            if (handle instanceof com.reiasu.reiparticlesapi.particles.control.ParticleController pc) {
+                data.getParticleInit().accept(pc);
+            }
+        }
+    }
+
+    private com.reiasu.reiparticlesapi.particles.Controllable<?>[] snapshotActiveControls() {
+        int size = Math.min(indexToUuid.length, sequencedParticlesData.size());
+        com.reiasu.reiparticlesapi.particles.Controllable<?>[] controls =
+                new com.reiasu.reiparticlesapi.particles.Controllable<?>[size];
+        for (int i = 0; i < size; i++) {
+            if (indexToUuid[i] == null) continue;
+            controls[i] = sequencedParticlesData.get(i).getKey().getControllable();
+        }
+        return controls;
+    }
+
+    private void restoreActiveControls(com.reiasu.reiparticlesapi.particles.Controllable<?>[] activeControls) {
+        getDisplayedEntries().clear();
+        Arrays.fill(indexToUuid, null);
+        int size = Math.min(activeControls.length, sequencedParticlesData.size());
+        for (int i = 0; i < size; i++) {
+            com.reiasu.reiparticlesapi.particles.Controllable<?> ctrl = activeControls[i];
+            if (ctrl == null) continue;
+            CompositionData data = sequencedParticlesData.get(i).getKey();
+            data.setControllable(ctrl);
+            getDisplayedEntries().add(data);
+            indexToUuid[i] = data.getUuid();
+        }
+    }
+
+    private void refreshDisplayedParticleLocations() {
+        int size = Math.min(indexToUuid.length, sequencedParticlesData.size());
+        for (int i = 0; i < size; i++) {
+            if (indexToUuid[i] == null) continue;
+            Map.Entry<CompositionData, RelativeLocation> entry = sequencedParticlesData.get(i);
+            com.reiasu.reiparticlesapi.particles.Controllable<?> ctrl = entry.getKey().getControllable();
+            if (ctrl == null) continue;
+            RelativeLocation rl = entry.getValue();
+            ctrl.teleportTo(getPosition().add(rl.getX(), rl.getY(), rl.getZ()));
+        }
+    }
+
+    private void recreateDisplayedParticlesFromIndex() {
+        Arrays.fill(indexToUuid, null);
+        int pages = pagesFor(count);
+        long[] bits = index.get();
+        int n = Math.min(bits.length, pages);
+        for (int page = 0; page < n; page++) {
+            long v = bits[page];
+            if (v == 0L) continue;
+            int base = page << 6;
+            while (v != 0L) {
+                int bit = Long.numberOfTrailingZeros(v);
+                int i = base + bit;
+                if (i < count) {
+                    createWithIndex(i);
+                }
+                v &= v - 1L;
+            }
+        }
+    }
+
+    private boolean hasDisplayTransformChanged(ParticleComposition other) {
+        return !getPosition().equals(other.getPosition())
+                || Double.compare(getScale(), other.getScale()) != 0
+                || Double.compare(getRoll(), other.getRoll()) != 0
+                || !sameLocation(getAxis(), other.getAxis());
+    }
+
+    private static boolean sameLocation(RelativeLocation left, RelativeLocation right) {
+        return Double.compare(left.getX(), right.getX()) == 0
+                && Double.compare(left.getY(), right.getY()) == 0
+                && Double.compare(left.getZ(), right.getZ()) == 0;
     }
 
     // ─── Index diff application ──────────────────────────────────────────

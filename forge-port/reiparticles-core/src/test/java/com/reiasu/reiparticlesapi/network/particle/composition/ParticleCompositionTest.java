@@ -10,10 +10,13 @@ import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ParticleCompositionTest {
@@ -79,6 +82,55 @@ class ParticleCompositionTest {
         assertEquals(1.5, location.length(), 1.0E-6);
     }
 
+    @Test
+    void shouldRejectSequencedParticleStatusAtCountBoundary() {
+        TrackingSequencedComposition composition = new TrackingSequencedComposition();
+        composition.setCount(1);
+
+        composition.setParticleStatus(0, true);
+
+        assertTrue(composition.isParticleDisplayed(0));
+        assertFalse(composition.isParticleDisplayed(1));
+    }
+
+    @Test
+    void autoCompositionShouldSnapshotAddedLocations() {
+        AutoParticleComposition composition = new AutoParticleComposition();
+        CompositionData data = new CompositionData();
+        RelativeLocation source = new RelativeLocation(3.0, 0.0, 0.0);
+
+        composition.addParticle(data, source);
+        source.scale(2.0);
+        RelativeLocation firstLocation = composition.getParticles().get(data);
+
+        assertEquals(3.0, firstLocation.length(), 1.0E-6);
+        firstLocation.scale(2.0);
+        RelativeLocation secondLocation = composition.getParticles().get(data);
+
+        assertEquals(6.0, firstLocation.length(), 1.0E-6);
+        assertEquals(3.0, secondLocation.length(), 1.0E-6);
+        assertNotSame(firstLocation, secondLocation);
+    }
+
+    @Test
+    void autoCompositionShouldNotCompoundScaleIntoStoredLocations() {
+        AutoParticleComposition composition = new AutoParticleComposition();
+        CompositionData data = new CompositionData();
+        composition.addParticle(data, new RelativeLocation(3.0, 0.0, 0.0));
+
+        composition.scale(2.0);
+        Map<CompositionData, RelativeLocation> firstFrame = composition.getParticles();
+        composition.toggleScale(firstFrame);
+
+        composition.scale(0.5);
+        Map<CompositionData, RelativeLocation> secondFrame = composition.getParticles();
+        composition.toggleScale(secondFrame);
+
+        assertEquals(6.0, firstFrame.get(data).length(), 1.0E-6);
+        assertEquals(1.5, secondFrame.get(data).length(), 1.0E-6);
+        assertEquals(3.0, composition.getParticles().get(data).length(), 1.0E-6);
+    }
+
     private static final class TrackingComposition extends ParticleComposition {
         private final Map<CompositionData, RelativeLocation> locations = new LinkedHashMap<>();
         private int onDisplayCalls;
@@ -91,6 +143,21 @@ class ParticleCompositionTest {
         @Override
         public void onDisplay() {
             onDisplayCalls++;
+        }
+    }
+
+    private static final class TrackingSequencedComposition extends SequencedParticleComposition {
+        private TrackingSequencedComposition() {
+            super(Vec3.ZERO, null);
+        }
+
+        @Override
+        public SortedMap<CompositionData, RelativeLocation> getParticleSequenced() {
+            return new TreeMap<>();
+        }
+
+        @Override
+        public void onDisplay() {
         }
     }
 }

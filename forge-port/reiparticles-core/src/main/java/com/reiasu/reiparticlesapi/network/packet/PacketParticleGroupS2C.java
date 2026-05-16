@@ -2,6 +2,7 @@
 // Copyright (C) 2025 Reiasu
 package com.reiasu.reiparticlesapi.network.packet;
 
+import com.reiasu.reiparticlesapi.network.buffer.FriendlyByteBufs;
 import com.reiasu.reiparticlesapi.network.buffer.ParticleControllerDataBuffer;
 import com.reiasu.reiparticlesapi.network.buffer.ParticleControllerDataBuffers;
 import com.reiasu.reiparticlesapi.particles.control.ControlType;
@@ -69,8 +70,7 @@ public record PacketParticleGroupS2C(
         while (buf.readableBytes() > 0) {
             int len = buf.readInt();
             String key = buf.readUtf();
-            byte[] raw = new byte[len];
-            buf.readBytes(raw);
+            byte[] raw = FriendlyByteBufs.readPayload(buf, len, "particle group arg payload");
             args.put(key, ParticleControllerDataBuffers.INSTANCE.decodeToBuffer(raw));
         }
         return new PacketParticleGroupS2C(uuid, type, args);

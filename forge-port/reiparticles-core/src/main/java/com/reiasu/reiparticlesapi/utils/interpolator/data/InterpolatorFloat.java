@@ -96,4 +96,5 @@ public final class InterpolatorFloat implements InterpolatorData<Float> {
         update(value / other.value);
         return this;
     }
+
 }

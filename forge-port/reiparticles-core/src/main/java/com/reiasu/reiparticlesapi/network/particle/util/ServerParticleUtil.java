@@ -41,7 +41,7 @@ public final class ServerParticleUtil {
     public void spawnSingle(ParticleOptions type, ServerLevel world, Vec3 pos,
                             Vec3 delta, boolean force, double speed, int count, double range) {
         for (ServerPlayer player : world.players()) {
-            if (player.position().distanceTo(pos) > range) continue;
+            if (!isInRange(player.position(), pos, range)) continue;
             world.sendParticles(player, type, force, pos.x, pos.y, pos.z,
                     count, delta.x, delta.y, delta.z, speed);
         }
@@ -61,7 +61,7 @@ public final class ServerParticleUtil {
                             Vec3 pos, Vec3 velocity, double range) {
         PacketParticleS2C packet = new PacketParticleS2C(type, pos, velocity);
         for (ServerPlayer player : world.players()) {
-            if (player.position().distanceTo(pos) > range) continue;
+            if (!isInRange(player.position(), pos, range)) continue;
             ReiParticlesNetwork.sendTo(player, packet);
         }
     }
@@ -72,6 +72,13 @@ public final class ServerParticleUtil {
         for (ServerPlayer player : world.players()) {
             ReiParticlesNetwork.sendTo(player, packet);
         }
+    }
+
+    static boolean isInRange(Vec3 viewerPos, Vec3 targetPos, double range) {
+        if (range < 0.0) {
+            return false;
+        }
+        return viewerPos.distanceToSqr(targetPos) <= range * range;
     }
 }
 

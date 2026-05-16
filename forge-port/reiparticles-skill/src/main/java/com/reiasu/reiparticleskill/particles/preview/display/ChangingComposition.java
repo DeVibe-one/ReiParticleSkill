@@ -99,12 +99,20 @@ public final class ChangingComposition extends AutoParticleComposition {
             level.sendParticles(particle, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
         }
 
-        if ((lifeTick & 5) == 0) {
+        if (shouldEmitEndRodBurst(lifeTick)) {
             level.sendParticles(ParticleTypes.END_ROD, center.x, center.y + 0.12, center.z, 8, 0.3, 0.08, 0.3, 0.0);
         }
-        if ((lifeTick & 7) == 0) {
+        if (shouldEmitEnchantBurst(lifeTick)) {
             level.sendParticles(ParticleTypes.ENCHANT, center.x, center.y + 0.09, center.z, 12, 0.35, 0.05, 0.35, 0.0);
         }
+    }
+
+    static boolean shouldEmitEndRodBurst(int lifeTick) {
+        return lifeTick % 5 == 0;
+    }
+
+    static boolean shouldEmitEnchantBurst(int lifeTick) {
+        return lifeTick % 8 == 0;
     }
 
     private static List<List<RelativeLocation>> createShapes() {

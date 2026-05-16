@@ -9,8 +9,15 @@ import org.junit.jupiter.api.Test;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReiAPIScannerTest {
     @AfterEach
@@ -33,6 +40,60 @@ class ReiAPIScannerTest {
                 "com.example.BetaPort",
                 "com.example.ZetaPort"
         ), discovered);
+    }
+
+    @Test
+    void shouldAllowConcurrentReadsWhileScanResultsAreAdded() throws Exception {
+        int writes = 1000;
+        CountDownLatch start = new CountDownLatch(1);
+        AtomicBoolean writing = new AtomicBoolean(true);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> writer = executor.submit(() -> {
+                try {
+                    if (!start.await(5, TimeUnit.SECONDS)) {
+                        throw new AssertionError("Timed out waiting to start scanner writer");
+                    }
+                    for (int i = 0; i < writes; i++) {
+                        ReiAPIScanner.INSTANCE.inputScanResult(info("com.example.Concurrent" + i));
+                        if ((i & 7) == 0) {
+                            Thread.yield();
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError("Interrupted while writing scan results", e);
+                } finally {
+                    writing.set(false);
+                }
+            });
+            Future<?> reader = executor.submit(() -> {
+                try {
+                    if (!start.await(5, TimeUnit.SECONDS)) {
+                        throw new AssertionError("Timed out waiting to start scanner reader");
+                    }
+                    while (writing.get()) {
+                        ReiAPIScanner.INSTANCE.getWithAnnotation(ReiAutoRegister.class);
+                    }
+                    ReiAPIScanner.INSTANCE.getWithAnnotation(ReiAutoRegister.class);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError("Interrupted while reading scan results", e);
+                }
+            });
+
+            start.countDown();
+            writer.get(5, TimeUnit.SECONDS);
+            reader.get(5, TimeUnit.SECONDS);
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+        }
+
+        assertEquals(writes, ReiAPIScanner.INSTANCE.getWithAnnotation(ReiAutoRegister.class).size());
+        assertTrue(ReiAPIScanner.INSTANCE.getWithAnnotation(ReiAutoRegister.class).stream()
+                .map(SimpleClassInfo::getType)
+                .allMatch(type -> type.startsWith("com.example.Concurrent")));
     }
 
     private static SimpleClassInfo info(String typeName) {

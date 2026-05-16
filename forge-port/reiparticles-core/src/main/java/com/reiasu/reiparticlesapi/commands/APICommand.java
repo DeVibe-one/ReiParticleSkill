@@ -29,6 +29,7 @@ public final class APICommand {
     public void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
                 LiteralArgumentBuilder.<CommandSourceStack>literal("cleanapi")
+                        .requires(source -> source.hasPermission(2))
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("display")
                                 .executes(ctx -> {
                                     DisplayEntityManager.INSTANCE.clear();

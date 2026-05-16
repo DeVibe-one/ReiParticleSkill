@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -31,6 +32,7 @@ class RuntimePortAutoRegistrarTest {
     void cleanup() {
         ReiAPIScanner.INSTANCE.clear();
         ClientRenderEntityManager.INSTANCE.clear();
+        SuccessRenderEntity.lastDecodeBuffer = null;
     }
 
     @Test
@@ -42,6 +44,9 @@ class RuntimePortAutoRegistrarTest {
         assertNotNull(ParticleEmittersManager.getCodecFromID(SuccessEmitter.CODEC_ID));
         assertNotNull(ParticleStyleManager.getProvider(SuccessStyle.REGISTRY_KEY));
         assertNotNull(ClientRenderEntityManager.INSTANCE.getCodecFromID(SuccessRenderEntity.ID));
+        ClientRenderEntityManager.INSTANCE.getCodecFromID(SuccessRenderEntity.ID).apply(new byte[]{1, 2, 3});
+        assertNotNull(SuccessRenderEntity.lastDecodeBuffer);
+        assertEquals(0, SuccessRenderEntity.lastDecodeBuffer.refCnt());
         assertTrue(recorder.hasEvent("info", "Auto-registered"));
     }
 
@@ -107,11 +112,11 @@ class RuntimePortAutoRegistrarTest {
     @ReiAutoRegister
     public static final class SuccessRenderEntity extends RenderEntity {
         public static final ResourceLocation ID = new ResourceLocation("reiparticlesruntime", "success_render_entity_test");
+        private static FriendlyByteBuf lastDecodeBuffer;
 
         public static SuccessRenderEntity decode(FriendlyByteBuf buf) {
-            SuccessRenderEntity entity = new SuccessRenderEntity();
-            RenderEntity.decodeBase(entity, buf);
-            return entity;
+            lastDecodeBuffer = buf;
+            return new SuccessRenderEntity();
         }
 
         @Override

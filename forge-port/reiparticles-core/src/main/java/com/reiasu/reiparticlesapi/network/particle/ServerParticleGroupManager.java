@@ -195,7 +195,11 @@ public final class ServerParticleGroupManager {
         if (group.getWorld() != player.level()) {
             return false;
         }
-        return group.getPos().distanceTo(player.position()) <= group.getVisibleRange();
+        double visibleRange = group.getVisibleRange();
+        if (visibleRange < 0.0) {
+            return false;
+        }
+        return group.getPos().distanceToSqr(player.position()) <= visibleRange * visibleRange;
     }
 
     static PacketParticleGroupS2C buildCreatePacket(ServerParticleGroup targetGroup) {

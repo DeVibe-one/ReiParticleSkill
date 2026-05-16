@@ -96,4 +96,5 @@ public final class InterpolatorDouble implements InterpolatorData<Double> {
         update(value / other.value);
         return this;
     }
+
 }

@@ -19,16 +19,13 @@ public final class SkillKeyActionService {
         if (player == null || keyId == null || !canUseSkill(player, stack)) {
             return false;
         }
+        KeySkillAction action = resolveKeyAction(keyId);
+        if (action == null) {
+            return false;
+        }
         player.getCooldowns().addCooldown(stack.getItem(), USE_COOLDOWN_TICKS);
-        if (SkillKeys.FORMATION_1.equals(keyId)) {
-            SwordLightEnchantUtil.placeSwordFormation(player, stack);
-            return true;
-        }
-        if (SkillKeys.FORMATION_2.equals(keyId)) {
-            SwordLightEnchantUtil.placeSwordFormation2(player, stack);
-            return true;
-        }
-        return false;
+        action.run(player, stack);
+        return true;
     }
 
     public static boolean triggerShoot(Player player, ItemStack stack) {
@@ -48,5 +45,32 @@ public final class SkillKeyActionService {
             return false;
         }
         return SkillEnchantments.getSwordLightLevel(stack) > 0;
+    }
+
+    static KeySkillAction resolveKeyAction(ResourceLocation keyId) {
+        if (SkillKeys.FORMATION_1.equals(keyId)) {
+            return KeySkillAction.FORMATION_1;
+        }
+        if (SkillKeys.FORMATION_2.equals(keyId)) {
+            return KeySkillAction.FORMATION_2;
+        }
+        return null;
+    }
+
+    enum KeySkillAction {
+        FORMATION_1 {
+            @Override
+            void run(Player player, ItemStack stack) {
+                SwordLightEnchantUtil.placeSwordFormation(player, stack);
+            }
+        },
+        FORMATION_2 {
+            @Override
+            void run(Player player, ItemStack stack) {
+                SwordLightEnchantUtil.placeSwordFormation2(player, stack);
+            }
+        };
+
+        abstract void run(Player player, ItemStack stack);
     }
 }

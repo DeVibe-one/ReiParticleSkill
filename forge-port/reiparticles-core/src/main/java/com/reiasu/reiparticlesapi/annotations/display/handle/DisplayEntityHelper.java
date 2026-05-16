@@ -11,9 +11,6 @@ import net.minecraft.world.phys.Vec3;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -50,7 +47,6 @@ public final class DisplayEntityHelper {
             constructor = type.getConstructor(Vec3.class);
         } catch (NoSuchMethodException e) {
             try {
-                // Fall back to (Vec3, Level) constructor
                 constructor = type.getConstructor(Vec3.class, net.minecraft.world.level.Level.class);
             } catch (NoSuchMethodException e2) {
                 throw new IllegalStateException(
@@ -66,17 +62,13 @@ public final class DisplayEntityHelper {
         );
     }
 
-    // ─── Encode ──────────────────────────────────────────────────────────
-
     private static void encodeEntity(Class<?> type, FriendlyByteBuf buf,
                                       DisplayEntity entity) {
         DisplayEntity.encodeBase(entity, buf);
 
-        List<Field> fields = getCodecFields(type);
+        List<Field> fields = CodecHelper.INSTANCE.getCodecFields(type);
         for (Field field : fields) {
-            field.setAccessible(true);
-            Class<?> fieldType = field.getType();
-            BufferCodec<Object> codec = getCodecOrThrow(fieldType);
+            BufferCodec<Object> codec = getCodecOrThrow(field.getType());
             try {
                 codec.encode(buf, field.get(entity));
             } catch (IllegalAccessException e) {
@@ -84,8 +76,6 @@ public final class DisplayEntityHelper {
             }
         }
     }
-
-    // ─── Decode ──────────────────────────────────────────────────────────
 
     private static DisplayEntity decodeEntity(Constructor<?> constructor,
                                                Class<?> type,
@@ -103,11 +93,9 @@ public final class DisplayEntityHelper {
 
         DisplayEntity.decodeBase(instance, buf);
 
-        List<Field> fields = getCodecFields(type);
+        List<Field> fields = CodecHelper.INSTANCE.getCodecFields(type);
         for (Field field : fields) {
-            field.setAccessible(true);
-            Class<?> fieldType = field.getType();
-            BufferCodec<Object> codec = getCodecOrThrow(fieldType);
+            BufferCodec<Object> codec = getCodecOrThrow(field.getType());
             try {
                 Object value = codec.decode(buf);
                 field.set(instance, value);
@@ -119,28 +107,8 @@ public final class DisplayEntityHelper {
         return instance;
     }
 
-    // ─── Utilities ───────────────────────────────────────────────────────
-
-    private static List<Field> getCodecFields(Class<?> type) {
-        Field[] allFields = type.getDeclaredFields();
-        List<Field> result = new ArrayList<>();
-        for (Field f : allFields) {
-            if (f.isAnnotationPresent(CodecField.class) && !Modifier.isFinal(f.getModifiers())) {
-                result.add(f);
-            }
-        }
-        result.sort(Comparator.comparing(Field::getName));
-        return result;
-    }
-
     @SuppressWarnings("unchecked")
     private static BufferCodec<Object> getCodecOrThrow(Class<?> fieldType) {
-        BufferCodec<?> codec = CodecHelper.INSTANCE.getSupposedTypes().get(fieldType.getName());
-        if (codec == null) {
-            throw new IllegalArgumentException(
-                    "Unsupported type: " + fieldType.getName() +
-                    " — register it via CodecHelper.INSTANCE.register()");
-        }
-        return (BufferCodec<Object>) codec;
+        return (BufferCodec<Object>) CodecHelper.INSTANCE.getCodecOrThrow(fieldType);
     }
 }

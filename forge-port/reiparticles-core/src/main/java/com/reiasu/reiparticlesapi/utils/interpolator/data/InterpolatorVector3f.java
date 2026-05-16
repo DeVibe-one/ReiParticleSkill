@@ -46,4 +46,5 @@ public final class InterpolatorVector3f implements InterpolatorData<Vector3f> {
     public Vector3f getCurrent() {
         return value;
     }
+
 }

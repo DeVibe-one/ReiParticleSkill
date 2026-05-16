@@ -120,14 +120,12 @@ public final class PillarFourierBeamEmitter extends TimedRespawnEmitter {
             }
 
             // Central spine: bright core line
-            if (s % 1 == 0) {
-                DustParticleOptions coreDust = new DustParticleOptions(BRIGHT_COLOR,
-                        Mth.clamp(4.0f * alpha, 1.5f, 4.0f));
-                ServerParticleUtil.sendForce(level, coreDust,
-                        pillarBase.x, pillarBase.y + y, pillarBase.z,
-                        3, 0.15, 0.15, 0.15, 0.0);
-                emitted += 3;
-            }
+            DustParticleOptions coreDust = new DustParticleOptions(BRIGHT_COLOR,
+                    Mth.clamp(4.0f * alpha, 1.5f, 4.0f));
+            ServerParticleUtil.sendForce(level, coreDust,
+                    pillarBase.x, pillarBase.y + y, pillarBase.z,
+                    3, 0.15, 0.15, 0.15, 0.0);
+            emitted += 3;
         }
         return emitted;
     }

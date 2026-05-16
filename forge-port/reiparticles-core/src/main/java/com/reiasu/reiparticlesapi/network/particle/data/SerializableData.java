@@ -4,15 +4,19 @@ package com.reiasu.reiparticlesapi.network.particle.data;
 
 import com.reiasu.reiparticlesapi.particles.ParticleDisplayer;
 
+import javax.annotation.Nullable;
+
 /**
  * Marker interface for data objects that can be network-serialized and
- * used to create a {@link ParticleDisplayer} on the client side.
+ * used to create a {@link ParticleDisplayer} on the client side when the
+ * data type owns client-side particle creation.
  * <p>
  * Forge port note: the original Fabric {@code getCodec()} returned a
  * StreamCodec for network serialization. In the Forge port, serialization
  * is handled at a higher level using FriendlyByteBuf directly, so the
- * codec method is omitted. Implementations should still support
- * clone and createDisplayer.
+ * codec method is omitted. Implementations should still support clone.
+ * Server-only data may return null from createDisplayer when client display
+ * is handled by a runtime manager instead of this data object.
  */
 public interface SerializableData {
 
@@ -23,7 +27,9 @@ public interface SerializableData {
 
     /**
      * Creates a {@link ParticleDisplayer} that renders the particle
-     * described by this data.
+     * described by this data, or null for server-only data whose display
+     * is handled by another runtime path.
      */
+    @Nullable
     ParticleDisplayer createDisplayer();
 }

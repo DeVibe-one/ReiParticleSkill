@@ -13,6 +13,7 @@ import com.reiasu.reiparticleskill.particles.core.emitters.p1.CollectEnderPowerE
 import com.reiasu.reiparticleskill.particles.core.emitters.p1.CollectPillarsEmitters;
 import com.reiasu.reiparticleskill.particles.core.emitters.p1.EndBeamExplosionEmitter;
 import com.reiasu.reiparticleskill.particles.core.emitters.p1.EndCrystalEmitters;
+import com.reiasu.reiparticleskill.particles.core.emitters.p1.SummonExplosionEmitter;
 import com.reiasu.reiparticleskill.particles.preview.styles.EndCrystalStyle;
 import com.reiasu.reiparticleskill.particles.preview.styles.EndDustStyle;
 import com.reiasu.reiparticleskill.particles.preview.styles.EnderRespawnCenterStyle;
@@ -34,7 +35,7 @@ import java.util.Set;
 
 /**
  * Utility singleton that orchestrates dragon respawn animation sequences.
- * Manages state transitions (setup ??pillars ??crystal converge ??end explosion)
+ * Manages state transitions (setup -> pillars -> crystal converge -> end explosion)
  * using the Animate system and particle emitters/styles.
  * Server-side port of the Fabric original.
  */
@@ -172,7 +173,7 @@ public final class DragonRespawnStateUtil {
     }
 
     /**
-     * Handle the end phase ??summon explosion and dragon invulnerability toggle.
+     * Handle the end phase: summon explosion and dragon invulnerability toggle.
      */
     public void handleEnd() {
         if (world == null || pos == null) return;
@@ -181,6 +182,9 @@ public final class DragonRespawnStateUtil {
 
         // Camera shake
         ServerCameraUtil.sendShake(world, center, 128.0, 3.0, 20);
+
+        // Summon flash
+        spawnManagedEmitter(new SummonExplosionEmitter(center, world));
 
         // End beam explosion
         EndBeamExplosionEmitter explosion = new EndBeamExplosionEmitter(center, world);

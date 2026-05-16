@@ -223,6 +223,7 @@ final class ParticleEmitterVisibilityTracker {
             if (changePacket == null) {
                 changePacket = new PacketParticleEmittersS2C(
                         emitterKey,
+                        emitters.getUuid(),
                         payload(),
                         PacketParticleEmittersS2C.PacketType.CHANGE_OR_CREATE
                 );
@@ -234,7 +235,8 @@ final class ParticleEmitterVisibilityTracker {
             if (removePacket == null) {
                 removePacket = new PacketParticleEmittersS2C(
                         emitterKey,
-                        payload(),
+                        emitters.getUuid(),
+                        new byte[0],
                         PacketParticleEmittersS2C.PacketType.REMOVE
                 );
             }

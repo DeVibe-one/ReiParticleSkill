@@ -29,6 +29,7 @@ import java.util.UUID;
  * rotation, and velocity damping near the destination.
  * Server-side port of the Fabric original.
  */
+@ReiAutoRegister
 public final class CollectEnderPowerEmitter extends AutoParticleEmitters {
     public static final ResourceLocation CODEC_ID = new ResourceLocation("reiparticleskill", "collect_ender_power");
 

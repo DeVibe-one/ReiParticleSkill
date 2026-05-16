@@ -12,9 +12,6 @@ import net.minecraft.world.phys.Vec3;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -44,7 +41,7 @@ public final class ParticleEmittersHelper {
      * by reflecting over its {@link CodecField}-annotated fields.
      * <p>
      * The encoder writes the base emitter data followed by each annotated field
-     * (sorted by field name). The decoder constructs a new instance via the
+     * (sorted by {@link CodecField#index()}). The decoder constructs a new instance via the
      * {@code (Vec3, Level)} constructor, reads base data, then reads each field.
      */
     public BufferCodec<ParticleEmitters> generateCodec(ClassParticleEmitters randomInstance) {
@@ -65,18 +62,11 @@ public final class ParticleEmittersHelper {
         );
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
     private void encodeEmitter(Class<?> type, FriendlyByteBuf buf, ClassParticleEmitters emitter) {
         ClassParticleEmitters.Companion.encodeBase(emitter, buf);
-        List<Field> fields = getCodecFields(type);
+        List<Field> fields = CodecHelper.INSTANCE.getCodecFields(type);
         for (Field field : fields) {
-            field.setAccessible(true);
-            String codecKey = field.getType().getName();
-            BufferCodec codec = CodecHelper.INSTANCE.getSupposedTypes().get(codecKey);
-            if (codec == null) {
-                throw new IllegalArgumentException(
-                        "Unsupported codec type: " + codecKey + "; register it via CodecHelper.INSTANCE.register()");
-            }
+            BufferCodec<Object> codec = getCodecOrThrow(field.getType());
             try {
                 codec.encode(buf, field.get(emitter));
             } catch (IllegalAccessException e) {
@@ -95,15 +85,9 @@ public final class ParticleEmittersHelper {
 
         ClassParticleEmitters.Companion.decodeBase(instance, buf);
 
-        List<Field> fields = getCodecFields(type);
+        List<Field> fields = CodecHelper.INSTANCE.getCodecFields(type);
         for (Field field : fields) {
-            field.setAccessible(true);
-            String codecKey = field.getType().getName();
-            BufferCodec<?> codec = CodecHelper.INSTANCE.getSupposedTypes().get(codecKey);
-            if (codec == null) {
-                throw new IllegalArgumentException(
-                        "Unsupported codec type: " + codecKey + "; register it via CodecHelper.INSTANCE.register()");
-            }
+            BufferCodec<Object> codec = getCodecOrThrow(field.getType());
             try {
                 Object value = codec.decode(buf);
                 field.set(instance, value);
@@ -114,19 +98,8 @@ public final class ParticleEmittersHelper {
         return instance;
     }
 
-    /**
-     * Returns all {@link CodecField}-annotated, non-final fields of the given class,
-     * sorted by field name for deterministic serialization order.
-     */
-    private List<Field> getCodecFields(Class<?> type) {
-        Field[] allFields = type.getDeclaredFields();
-        List<Field> result = new ArrayList<>();
-        for (Field f : allFields) {
-            if (f.isAnnotationPresent(CodecField.class) && !Modifier.isFinal(f.getModifiers())) {
-                result.add(f);
-            }
-        }
-        result.sort(Comparator.comparing(Field::getName));
-        return result;
+    @SuppressWarnings("unchecked")
+    private static BufferCodec<Object> getCodecOrThrow(Class<?> fieldType) {
+        return (BufferCodec<Object>) CodecHelper.INSTANCE.getCodecOrThrow(fieldType);
     }
 }

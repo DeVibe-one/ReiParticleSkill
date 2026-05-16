@@ -2,6 +2,7 @@
 // Copyright (C) 2025 Reiasu
 package com.reiasu.reiparticlesapi.network.packet;
 
+import com.reiasu.reiparticlesapi.network.buffer.FriendlyByteBufs;
 import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.UUID;
@@ -51,8 +52,7 @@ public final class PacketParticleCompositionS2C {
         UUID uuid = buf.readUUID();
         boolean distanceRemove = buf.readBoolean();
         int size = buf.readInt();
-        byte[] data = new byte[size];
-        buf.readBytes(data);
+        byte[] data = FriendlyByteBufs.readPayload(buf, size, "particle composition payload");
         PacketParticleCompositionS2C packet = new PacketParticleCompositionS2C(uuid, type, data);
         packet.setDistanceRemove(distanceRemove);
         return packet;

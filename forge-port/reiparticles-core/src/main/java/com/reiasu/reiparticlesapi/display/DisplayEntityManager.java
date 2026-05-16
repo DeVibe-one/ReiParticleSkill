@@ -199,7 +199,8 @@ public final class DisplayEntityManager {
         if (displayPos == null || viewerPos == null) {
             return false;
         }
-        return displayPos.distanceTo(viewerPos) <= Math.max(0.0, visibleRange);
+        double safeRange = Math.max(0.0, visibleRange);
+        return displayPos.distanceToSqr(viewerPos) <= safeRange * safeRange;
     }
 
     private void advanceDirtySyncWindow(UUID displayId) {

@@ -35,6 +35,7 @@ class ClientDisplayEntityPacketHandlerTest {
         assertNotNull(created);
         assertEquals(source.getPos(), created.getPos());
         assertEquals(source.getScale(), created.getScale());
+        assertEquals(0, TestDisplayEntity.lastDecodeBuffer.refCnt());
 
         source.setPos(new Vec3(4.0, 5.0, 6.0));
         source.setScale(2.0f);
@@ -44,6 +45,7 @@ class ClientDisplayEntityPacketHandlerTest {
         assertNotNull(updated);
         assertEquals(source.getPos(), updated.getPos());
         assertEquals(source.getScale(), updated.getScale());
+        assertEquals(0, TestDisplayEntity.lastDecodeBuffer.refCnt());
     }
 
     @Test
@@ -64,8 +66,10 @@ class ClientDisplayEntityPacketHandlerTest {
 
     private static final class TestDisplayEntity extends DisplayEntity {
         private static final String TYPE_ID = "reiparticlesruntime:test_display_entity_handler";
+        private static FriendlyByteBuf lastDecodeBuffer;
 
         private static TestDisplayEntity decode(FriendlyByteBuf buf) {
+            lastDecodeBuffer = buf;
             TestDisplayEntity entity = new TestDisplayEntity();
             DisplayEntity.decodeBase(entity, buf);
             return entity;

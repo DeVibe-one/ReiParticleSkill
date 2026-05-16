@@ -46,4 +46,5 @@ public final class InterpolatorRelativeLocation implements InterpolatorData<Rela
     public RelativeLocation getCurrent() {
         return value;
     }
+
 }

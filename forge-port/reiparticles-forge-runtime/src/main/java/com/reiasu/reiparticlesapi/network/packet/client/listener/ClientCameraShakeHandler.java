@@ -19,7 +19,7 @@ public final class ClientCameraShakeHandler {
             return;
         }
         double range = packet.range();
-        if (range > 0.0 && player.position().distanceTo(packet.origin()) > range) {
+        if (range > 0.0 && player.position().distanceToSqr(packet.origin()) > range * range) {
             return;
         }
         CameraShakeClientState.start(new CameraShakeS2CPacket(packet.range(), packet.origin(), packet.amplitude(), packet.tick()));

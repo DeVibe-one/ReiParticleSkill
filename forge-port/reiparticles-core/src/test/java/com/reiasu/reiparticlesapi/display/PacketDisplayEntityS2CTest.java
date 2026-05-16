@@ -41,5 +41,20 @@ class PacketDisplayEntityS2CTest {
         assertEquals(source.type(), decoded.type());
         assertArrayEquals(source.data(), decoded.data());
     }
+
+    @Test
+    void shouldEncodeRemovePacketWithoutEntityPayload() {
+        DebugDisplayEntity entity = new DebugDisplayEntity(null, 4.0, 5.0, 6.0, "group", 20);
+        PacketDisplayEntityS2C source = PacketDisplayEntityS2C.ofRemove(entity);
+        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+
+        PacketDisplayEntityS2C.encode(source, buf);
+        PacketDisplayEntityS2C decoded = PacketDisplayEntityS2C.decode(buf);
+
+        assertEquals(PacketDisplayEntityS2C.Method.REMOVE, decoded.method());
+        assertEquals(source.uuid(), decoded.uuid());
+        assertEquals(source.type(), decoded.type());
+        assertArrayEquals(new byte[0], decoded.data());
+    }
 }
 

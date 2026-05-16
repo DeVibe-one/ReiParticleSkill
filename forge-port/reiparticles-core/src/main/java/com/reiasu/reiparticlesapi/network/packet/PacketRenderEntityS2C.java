@@ -2,6 +2,7 @@
 // Copyright (C) 2025 Reiasu
 package com.reiasu.reiparticlesapi.network.packet;
 
+import com.reiasu.reiparticlesapi.network.buffer.FriendlyByteBufs;
 import com.reiasu.reiparticlesapi.renderer.RenderEntity;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -104,8 +105,7 @@ public final class PacketRenderEntityS2C {
         UUID uuid = buf.readUUID();
         ResourceLocation id = buf.readResourceLocation();
         int size = buf.readInt();
-        byte[] entity = new byte[size];
-        buf.readBytes(entity);
+        byte[] entity = FriendlyByteBufs.readPayload(buf, size, "render entity payload");
         return new PacketRenderEntityS2C(uuid, entity, id, method);
     }
 }

@@ -213,6 +213,10 @@ public abstract class ParticleComposition
         return particleRotatedLocations;
     }
 
+    protected ArrayList<CompositionData> getDisplayedEntries() {
+        return displayedEntries;
+    }
+
     public int getTick() {
         return tick;
     }
@@ -331,6 +335,7 @@ public abstract class ParticleComposition
         this.visibleRange = other.visibleRange;
         this.position = other.position;
         this.canceled = other.canceled;
+        this.scale = other.scale;
         this.roll = other.roll;
         this.controlUUID = other.controlUUID;
         this.axis = other.axis;

@@ -7,7 +7,14 @@ import com.reiasu.reiparticlesapi.barrages.HitBox;
 import com.reiasu.reiparticlesapi.network.particle.data.DoubleRangeData;
 import com.reiasu.reiparticlesapi.network.particle.data.FloatRangeData;
 import com.reiasu.reiparticlesapi.network.particle.data.IntRangeData;
+import com.reiasu.reiparticlesapi.network.particle.emitters.ControllableParticleData;
+import com.reiasu.reiparticlesapi.network.particle.emitters.SimpleRandomParticleData;
 import com.reiasu.reiparticlesapi.utils.RelativeLocation;
+import com.reiasu.reiparticlesapi.utils.interpolator.data.InterpolatorDouble;
+import com.reiasu.reiparticlesapi.utils.interpolator.data.InterpolatorFloat;
+import com.reiasu.reiparticlesapi.utils.interpolator.data.InterpolatorRelativeLocation;
+import com.reiasu.reiparticlesapi.utils.interpolator.data.InterpolatorVec3d;
+import com.reiasu.reiparticlesapi.utils.interpolator.data.InterpolatorVector3f;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -23,7 +30,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 
 /**
@@ -38,7 +45,8 @@ public final class CodecHelper {
     public static final CodecHelper INSTANCE = new CodecHelper();
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private final HashMap<String, BufferCodec<?>> supposedTypes = new HashMap<>();
+    private final Map<String, BufferCodec<?>> supposedTypes = new ConcurrentHashMap<>();
+    private final Map<Class<?>, List<Field>> codecFieldsByClass = new ConcurrentHashMap<>();
 
     private CodecHelper() {
     }
@@ -64,7 +72,6 @@ public final class CodecHelper {
         if (!current.getClass().equals(other.getClass())) return;
 
         for (Field field : getCodecFields(current.getClass())) {
-            field.setAccessible(true);
             try {
                 field.set(current, field.get(other));
             } catch (IllegalAccessException e) {
@@ -82,11 +89,7 @@ public final class CodecHelper {
     @SuppressWarnings("unchecked")
     public void encodeAnnotatedFields(FriendlyByteBuf buf, Object obj) {
         for (Field field : getCodecFields(obj.getClass())) {
-            field.setAccessible(true);
-            BufferCodec<Object> codec = (BufferCodec<Object>) supposedTypes.get(field.getType().getName());
-            if (codec == null) {
-                throw new IllegalStateException("No codec registered for type: " + field.getType().getName());
-            }
+            BufferCodec<Object> codec = (BufferCodec<Object>) getCodecOrThrow(field.getType());
             try {
                 codec.encode(buf, field.get(obj));
             } catch (IllegalAccessException e) {
@@ -104,11 +107,7 @@ public final class CodecHelper {
     @SuppressWarnings("unchecked")
     public void decodeAnnotatedFields(FriendlyByteBuf buf, Object obj) {
         for (Field field : getCodecFields(obj.getClass())) {
-            field.setAccessible(true);
-            BufferCodec<Object> codec = (BufferCodec<Object>) supposedTypes.get(field.getType().getName());
-            if (codec == null) {
-                throw new IllegalStateException("No codec registered for type: " + field.getType().getName());
-            }
+            BufferCodec<Object> codec = (BufferCodec<Object>) getCodecOrThrow(field.getType());
             try {
                 field.set(obj, codec.decode(buf));
             } catch (IllegalAccessException e) {
@@ -121,16 +120,35 @@ public final class CodecHelper {
      * Returns {@link CodecField}-annotated non-final fields sorted by
      * {@link CodecField#index()} then by field name for deterministic ordering.
      */
-    private static List<Field> getCodecFields(Class<?> clazz) {
+    public List<Field> getCodecFields(Class<?> clazz) {
+        if (clazz == null) {
+            return List.of();
+        }
+        return codecFieldsByClass.computeIfAbsent(clazz, CodecHelper::scanCodecFields);
+    }
+
+    public BufferCodec<?> getCodecOrThrow(Class<?> fieldType) {
+        if (fieldType == null) {
+            throw new IllegalArgumentException("Codec type must not be null");
+        }
+        BufferCodec<?> codec = supposedTypes.get(fieldType.getName());
+        if (codec == null) {
+            throw new IllegalStateException("No codec registered for type: " + fieldType.getName());
+        }
+        return codec;
+    }
+
+    private static List<Field> scanCodecFields(Class<?> clazz) {
         List<Field> result = new ArrayList<>();
         for (Field f : clazz.getDeclaredFields()) {
             if (f.isAnnotationPresent(CodecField.class) && !Modifier.isFinal(f.getModifiers())) {
+                f.setAccessible(true);
                 result.add(f);
             }
         }
         result.sort(Comparator.comparingInt((Field f) -> f.getAnnotation(CodecField.class).index())
                 .thenComparing(Field::getName));
-        return result;
+        return List.copyOf(result);
     }
 
     // ────────────────── Static registration of built-in types ──────────────────
@@ -142,12 +160,9 @@ public final class CodecHelper {
         registerMathTypes();
         registerMinecraftTypes();
         registerProjectTypes();
+        registerParticleDataTypes();
+        registerInterpolatorTypes();
         registerRangeTypes();
-        // NOTE: ControllableParticleData, SimpleRandomParticleData, ItemStack,
-        // and all InterpolatorXxx types should register themselves via
-        //   CodecHelper.INSTANCE.register(MyClass.class, myCodec)
-        // in their own static initializers or during mod init, since their
-        // codecs are not yet available as static fields in Forge 1.20.1.
     }
 
     private static void registerPrimitives() {
@@ -264,6 +279,10 @@ public final class CodecHelper {
                         buf.readDouble(), buf.readDouble(), buf.readDouble()
                 )
         ));
+        INSTANCE.register(net.minecraft.world.item.ItemStack.class, BufferCodec.of(
+                FriendlyByteBuf::writeItem,
+                FriendlyByteBuf::readItem
+        ));
     }
 
     private static void registerProjectTypes() {
@@ -288,6 +307,111 @@ public final class CodecHelper {
                     buf.writeDouble(r.getZ());
                 },
                 buf -> new RelativeLocation(buf.readDouble(), buf.readDouble(), buf.readDouble())
+        ));
+    }
+
+    private static void registerParticleDataTypes() {
+        INSTANCE.register(ControllableParticleData.class, BufferCodec.of(
+                (buf, data) -> data.writeToBuf(buf),
+                buf -> {
+                    ControllableParticleData data = new ControllableParticleData();
+                    data.readFromBuf(buf);
+                    return data;
+                }
+        ));
+        INSTANCE.register(SimpleRandomParticleData.class, BufferCodec.of(
+                (buf, data) -> data.writeToBuf(buf),
+                buf -> {
+                    SimpleRandomParticleData data = new SimpleRandomParticleData();
+                    data.readFromBuf(buf);
+                    return data;
+                }
+        ));
+    }
+
+    private static void registerInterpolatorTypes() {
+        INSTANCE.register(InterpolatorDouble.class, BufferCodec.of(
+                (buf, value) -> {
+                    buf.writeDouble(value.getLast());
+                    buf.writeDouble(value.getCurrent());
+                },
+                buf -> {
+                    double last = buf.readDouble();
+                    double current = buf.readDouble();
+                    InterpolatorDouble value = new InterpolatorDouble(current);
+                    value.setLast(last);
+                    return value;
+                }
+        ));
+        INSTANCE.register(InterpolatorFloat.class, BufferCodec.of(
+                (buf, value) -> {
+                    buf.writeFloat(value.getLast());
+                    buf.writeFloat(value.getCurrent());
+                },
+                buf -> {
+                    float last = buf.readFloat();
+                    float current = buf.readFloat();
+                    InterpolatorFloat value = new InterpolatorFloat(current);
+                    value.setLast(last);
+                    return value;
+                }
+        ));
+        INSTANCE.register(InterpolatorRelativeLocation.class, BufferCodec.of(
+                (buf, value) -> {
+                    RelativeLocation last = value.getLast();
+                    RelativeLocation current = value.getCurrent();
+                    buf.writeDouble(last.getX());
+                    buf.writeDouble(last.getY());
+                    buf.writeDouble(last.getZ());
+                    buf.writeDouble(current.getX());
+                    buf.writeDouble(current.getY());
+                    buf.writeDouble(current.getZ());
+                },
+                buf -> {
+                    RelativeLocation last = new RelativeLocation(buf.readDouble(), buf.readDouble(), buf.readDouble());
+                    RelativeLocation current = new RelativeLocation(buf.readDouble(), buf.readDouble(), buf.readDouble());
+                    InterpolatorRelativeLocation value = new InterpolatorRelativeLocation(current);
+                    value.setLast(last);
+                    return value;
+                }
+        ));
+        INSTANCE.register(InterpolatorVec3d.class, BufferCodec.of(
+                (buf, value) -> {
+                    Vec3 last = value.getLast();
+                    Vec3 current = value.getCurrent();
+                    buf.writeDouble(last.x());
+                    buf.writeDouble(last.y());
+                    buf.writeDouble(last.z());
+                    buf.writeDouble(current.x());
+                    buf.writeDouble(current.y());
+                    buf.writeDouble(current.z());
+                },
+                buf -> {
+                    Vec3 last = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
+                    Vec3 current = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
+                    InterpolatorVec3d value = new InterpolatorVec3d(current);
+                    value.setLast(last);
+                    return value;
+                }
+        ));
+        INSTANCE.register(InterpolatorVector3f.class, BufferCodec.of(
+                (buf, value) -> {
+                    Vector3f last = value.getLast();
+                    Vector3f current = value.getCurrent();
+                    buf.writeFloat(last.x());
+                    buf.writeFloat(last.y());
+                    buf.writeFloat(last.z());
+                    buf.writeFloat(current.x());
+                    buf.writeFloat(current.y());
+                    buf.writeFloat(current.z());
+                },
+                buf -> {
+                    Vector3f last = new Vector3f(buf.readFloat(), buf.readFloat(), buf.readFloat());
+                    Vector3f current = new Vector3f(buf.readFloat(), buf.readFloat(), buf.readFloat());
+                    InterpolatorVector3f value = new InterpolatorVector3f(current);
+                    value.setLast(last);
+                    return value;
+                }
         ));
     }
 

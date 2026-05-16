@@ -3,6 +3,7 @@
 package com.reiasu.reiparticlesapi.network.packet;
 
 import com.reiasu.reiparticlesapi.display.DisplayEntity;
+import com.reiasu.reiparticlesapi.network.buffer.FriendlyByteBufs;
 import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.UUID;
@@ -42,7 +43,7 @@ public record PacketDisplayEntityS2C(UUID uuid, String type, byte[] data, Method
     }
 
     public static PacketDisplayEntityS2C ofRemove(DisplayEntity entity) {
-        return new PacketDisplayEntityS2C(entity.getControlUUID(), entity.typeId(), entity.encodeToBytes(), Method.REMOVE);
+        return new PacketDisplayEntityS2C(entity.getControlUUID(), entity.typeId(), new byte[0], Method.REMOVE);
     }
 
     public static void encode(PacketDisplayEntityS2C packet, FriendlyByteBuf buf) {
@@ -58,8 +59,7 @@ public record PacketDisplayEntityS2C(UUID uuid, String type, byte[] data, Method
         String type = buf.readUtf();
         UUID uuid = buf.readUUID();
         int size = buf.readInt();
-        byte[] data = new byte[size];
-        buf.readBytes(data);
+        byte[] data = FriendlyByteBufs.readPayload(buf, size, "display entity payload");
         return new PacketDisplayEntityS2C(uuid, type, data, method);
     }
 }

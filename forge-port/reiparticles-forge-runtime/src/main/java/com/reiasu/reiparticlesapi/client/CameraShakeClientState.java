@@ -45,7 +45,7 @@ public final class CameraShakeClientState {
             return;
         }
 
-        if (range > 0.0 && player.position().distanceTo(origin) > range) {
+        if (range > 0.0 && player.position().distanceToSqr(origin) > range * range) {
             remainingTicks--;
             return;
         }

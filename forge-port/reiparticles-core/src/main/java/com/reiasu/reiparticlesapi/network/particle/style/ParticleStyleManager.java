@@ -202,17 +202,18 @@ public final class ParticleStyleManager {
             VISIBILITY_TRACKER.clear();
             return;
         }
-        VISIBLE.entrySet().removeIf(entry -> {
-            UUID playerId = entry.getKey();
-            for (ParticleGroupStyle style : SERVER_VIEW_STYLES.values()) {
-                if (style.getWorld() instanceof ServerLevel level) {
-                    if (level.getServer().getPlayerList().getPlayer(playerId) != null) {
-                        return false;
-                    }
-                }
+        net.minecraft.server.MinecraftServer server = null;
+        for (ParticleGroupStyle style : SERVER_VIEW_STYLES.values()) {
+            if (style.getWorld() instanceof ServerLevel level) {
+                server = level.getServer();
+                break;
             }
-            return true;
-        });
+        }
+        if (server == null) {
+            return;
+        }
+        net.minecraft.server.MinecraftServer runtime = server;
+        VISIBLE.entrySet().removeIf(entry -> runtime.getPlayerList().getPlayer(entry.getKey()) == null);
     }
 
     public static void clearAllVisible() {
